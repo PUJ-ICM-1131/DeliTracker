@@ -1,0 +1,3 @@
+<resources>
+    <style name="Theme.DeliTracker" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
