@@ -10,6 +10,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.delitracker.app.R
 import kotlinx.coroutines.launch
+import com.delitracker.app.storage.ImageStorage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /** Estado de interfaz y sesión validada por el backend del proyecto. */
 class AppViewModel(application: Application) : AndroidViewModel(application) {
@@ -63,7 +66,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     // Perfil (se sobrescribe con lo guardado en el dispositivo, si existe)
     var userName by mutableStateOf("")
     var userEmail by mutableStateOf("")
+    private val photoStore = LocalPhotoStore(application)
 
+    var userPhotoPath by mutableStateOf<String?>(null)
+        private set
+    var reviewPhotoPath by mutableStateOf<String?>(null)
+        private set
+
+    private suspend fun deletePhotoFile(path: String?) = withContext(Dispatchers.IO) {
+        ImageStorage.delete(getApplication<Application>(), path)
+    }
     var hasAccount by mutableStateOf(false)
         private set
     var isLoggedIn by mutableStateOf(false)
@@ -75,11 +87,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     var authMessage by mutableStateOf<Int?>(null)
         private set
 
+    
     private fun applyProfile(profile: RemoteProfile) {
-        userName = profile.name
-        userEmail = profile.email
-        hasAccount = true
-        isLoggedIn = true
+    userName = profile.name
+    userEmail = profile.email
+    userPhotoPath = photoStore.get(profile.email)
+    hasAccount = true
+    isLoggedIn = true
     }
 
     init {
@@ -135,18 +149,28 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun updateProfile(name: String, email: String, onResult: (Boolean, Int?) -> Unit) {
-        execute(onResult) { applyProfile(profileRepository.updateProfile(name.trim(), email.trim())) }
+    execute(onResult) {
+        val oldEmail = userEmail
+        val updated = profileRepository.updateProfile(name.trim(), email.trim())
+        photoStore.move(oldEmail, updated.email)
+        applyProfile(updated)
     }
+}
 
     fun deleteAccount(onResult: (Boolean, Int?) -> Unit) {
-        execute(onResult) {
-            profileRepository.deleteAccount()
-            isLoggedIn = false
-            hasAccount = false
-            userName = ""
-            userEmail = ""
-        }
+    execute(onResult) {
+        val email = userEmail
+        profileRepository.deleteAccount()
+        deletePhotoFile(photoStore.get(email))
+        photoStore.remove(email)
+        userPhotoPath = null
+        reviewPhotoPath = null
+        isLoggedIn = false
+        hasAccount = false
+        userName = ""
+        userEmail = ""
     }
+}
 
     fun logout(onDone: () -> Unit) {
         if (authBusy) return
@@ -160,12 +184,27 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 isLoggedIn = false
                 userName = ""
                 userEmail = ""
+                userPhotoPath = null
+                reviewPhotoPath = null
                 authBusy = false
                 onDone()
             }
         }
     }
+    fun setProfilePhoto(path: String) {
+        val email = userEmail
+        if (email.isBlank()) return
+        val old = userPhotoPath
+        photoStore.set(email, path)
+        userPhotoPath = path
+        if (old != null && old != path) viewModelScope.launch { deletePhotoFile(old) }
+    }
 
+    fun setReviewPhoto(path: String) {
+        val old = reviewPhotoPath
+        reviewPhotoPath = path
+        if (old != null && old != path) viewModelScope.launch { deletePhotoFile(old) }
+    }
     fun toggleCuisine(key: String) {
         cuisine[key] = !(cuisine[key] ?: false)
     }

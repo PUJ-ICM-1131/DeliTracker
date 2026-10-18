@@ -176,3 +176,28 @@ fun DtCaption(text: String) {
         modifier = Modifier.padding(top = 6.dp, bottom = 2.dp)
     )
 }
+
+/** Avatar grande: muestra la foto guardada en almacenamiento interno o, si no hay, las iniciales. */
+@Composable
+fun ProfileAvatar(photoPath: String?, initials: String, size: Dp, modifier: Modifier = Modifier) {
+    val colors = DtTheme.colors
+    val hasPhoto = remember(photoPath) { photoPath != null && File(photoPath).exists() }
+    Box(
+        modifier = modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(colors.accentSoft),
+        contentAlignment = Alignment.Center
+    ) {
+        if (hasPhoto) {
+            AsyncImage(
+                model = File(photoPath!!),
+                contentDescription = stringResource(R.string.profile_photo_desc),
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            Text(initials, fontSize = (size.value / 3.6).sp, fontWeight = FontWeight.Bold, color = colors.accentSoftInk)
+        }
+    }
+}
