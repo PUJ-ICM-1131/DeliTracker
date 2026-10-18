@@ -62,15 +62,24 @@ fun DeliTrackerApp() {
             // así el botón atrás desde Mapa/Favoritos/Perfil ya no cae en Login.
             popUpTo(navController.graph.findStartDestination().id) {
                 inclusive = true
-                saveState = true
+                saveState = route != Routes.LOGIN
             }
             launchSingleTop = true
-            restoreState = true
+            restoreState = route != Routes.LOGIN
         }
     }
 
 
 
+
+    androidx.compose.runtime.LaunchedEffect(vm.isLoggedIn, currentRoute) {
+        if (!vm.isLoggedIn && currentRoute !in setOf(Routes.LOGIN, Routes.REGISTRO)) {
+            navController.navigate(Routes.LOGIN) {
+                popUpTo(navController.graph.id) { inclusive = true }
+                launchSingleTop = true
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -177,8 +186,7 @@ fun DeliTrackerApp() {
                     onPremium = { goTo(Routes.PREMIUM) },
                     onContexto = { goTo(Routes.CONTEXTO) },
                     onCerrarSesion = {
-                        vm.logout()
-                        goToTab(Routes.LOGIN)
+                        vm.logout { goToTab(Routes.LOGIN) }
                     },
                     onEliminarCuenta = { goTo(Routes.LOGOUT) }
                 )
@@ -191,9 +199,11 @@ fun DeliTrackerApp() {
             }
             composable(Routes.LOGOUT) {
                 LogoutScreen(
+                    vm = vm,
                     onEliminar = {
-                        vm.logout()
-                        goToTab(Routes.LOGIN)
+                        vm.deleteAccount { success, _ ->
+                            if (success) goToTab(Routes.LOGIN)
+                        }
                     },
                     onCancelar = { goBack() }
                 )
