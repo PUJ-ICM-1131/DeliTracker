@@ -13,6 +13,9 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
+        val authUrl = providers.gradleProperty("AUTH_BASE_URL").getOrElse("http://10.0.2.2:8080")
+        require(authUrl.matches(Regex("https?://[A-Za-z0-9.:-]+/?"))) { "AUTH_BASE_URL debe ser una URL HTTP(S) sin ruta" }
+        buildConfigField("String", "AUTH_BASE_URL", "\"${authUrl.trimEnd('/')}\"")
     }
 
     buildTypes {
@@ -32,6 +35,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     composeOptions {
