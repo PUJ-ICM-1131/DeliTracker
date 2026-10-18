@@ -73,6 +73,7 @@ fun RegistroScreen(vm: AppViewModel, onCrearCuenta: () -> Unit, onIrALogin: () -
         }
         Spacer(Modifier.height(16.dp))
         Button(
+            enabled = !vm.authBusy,
             onClick = {
                 vm.register(name = name, email = email, password = password) { success, message ->
                     if (success) {
@@ -89,7 +90,7 @@ fun RegistroScreen(vm: AppViewModel, onCrearCuenta: () -> Unit, onIrALogin: () -
             Text(stringResource(R.string.crear_cuenta))
         }
         Spacer(Modifier.height(10.dp))
-        TextButton(onClick = onIrALogin) {
+        TextButton(enabled = !vm.authBusy, onClick = onIrALogin) {
             Text(stringResource(R.string.ya_tienes_cuenta_inicia_sesi_n))
         }
     }
@@ -137,6 +138,7 @@ fun LoginScreen(vm: AppViewModel, onIniciarSesion: () -> Unit, onIrARegistro: ()
         }
         Spacer(Modifier.height(16.dp))
         Button(
+            enabled = !vm.authBusy,
             onClick = {
                 vm.login(email = email, password = password) { success, message ->
                     if (success) {
@@ -153,10 +155,11 @@ fun LoginScreen(vm: AppViewModel, onIniciarSesion: () -> Unit, onIrARegistro: ()
             Text(stringResource(R.string.iniciar_sesi_n))
         }
         Spacer(Modifier.height(6.dp))
-        TextButton(onClick = {}) { Text(stringResource(R.string.olvidaste_tu_contrase_a)) }
+        vm.authMessage?.let { Text(stringResource(it), color = MaterialTheme.colorScheme.error) }
+        if (vm.authBusy) CircularProgressIndicator()
 
         Spacer(Modifier.weight(1f))
-        TextButton(onClick = onIrARegistro) { Text(stringResource(R.string.crear_una_cuenta_nueva)) }
+        TextButton(enabled = !vm.authBusy, onClick = onIrARegistro) { Text(stringResource(R.string.crear_una_cuenta_nueva)) }
     }
 }
 
