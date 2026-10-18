@@ -8,3 +8,13 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+/backend/*.sqlite3*
+/backend/__pycache__/
+/entrega/
+
+
+/.tools/
+/.gradle-local/
+/originales/
+/app/build/
