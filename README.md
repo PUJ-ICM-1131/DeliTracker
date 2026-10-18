@@ -10,10 +10,7 @@ que renderiza contenido" que usaba el prototipo en JavaScript.
 1. Abre Android Studio (Koala/Ladybug o más reciente).
 2. `File > Open...` y selecciona la carpeta `DeliTracker` (la que contiene
    `settings.gradle.kts`).
-3. Si Android Studio te avisa que falta el Gradle Wrapper o pide actualizarlo,
-   dale a "OK" / "Sync Now" — lo completa automáticamente la primera vez
-   (solo incluí `gradle-wrapper.properties`, no el `.jar`, para no subir
-   binarios; Android Studio lo genera solo).
+3. El proyecto incluye Gradle Wrapper 8.7.
 4. Espera el Gradle Sync (descarga Compose, Navigation, etc.).
 5. Ejecuta en un emulador o dispositivo con `Run ▶` (mínimo Android 7.0 / API 24).
 
@@ -56,7 +53,7 @@ app/src/main/java/com/delitracker/app/
 Este proyecto cubre la interfaz y navegación de las 19 historias de usuario,
 pero (igual que el prototipo) usa datos de ejemplo embebidos en el código:
 
-- No hay backend/API real ni persistencia (Room/DataStore).
+- La autenticación usa un backend propio con SQLite; las demás funciones conservan el alcance original.
 - El mapa es una superficie decorativa; falta integrar Google Maps SDK
   (los permisos de ubicación ya están declarados en el `AndroidManifest.xml`).
 - La cámara AR es una maqueta visual; falta integrar CameraX + ARCore/ML Kit
