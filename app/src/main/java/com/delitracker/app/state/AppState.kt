@@ -11,17 +11,7 @@ import androidx.lifecycle.viewModelScope
 import com.delitracker.app.R
 import kotlinx.coroutines.launch
 
-/**
- * Estado global de la app, equivalente al objeto `state` del prototipo JS.
- * Se inyecta una sola instancia en el NavHost para que sobreviva a la navegación
- * entre pantallas, igual que el `state` global del prototipo.
- *
- * Es un AndroidViewModel (en vez de un ViewModel simple) porque necesita
- * Context para leer/escribir el perfil y las credenciales guardadas en el
- * dispositivo (DataStore), y también para poder resolver textos de
- * strings.xml con application.getString(...) — aquí no se puede usar
- * stringResource() porque esta clase no es @Composable.
- */
+/** Estado de interfaz y sesión validada por el backend del proyecto. */
 class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     private val profileRepository = UserProfileRepository(application)
@@ -74,90 +64,105 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     var userName by mutableStateOf("")
     var userEmail by mutableStateOf("")
 
-    /** True si ya existe una cuenta creada en este dispositivo (registro completado). */
     var hasAccount by mutableStateOf(false)
         private set
-
     var isLoggedIn by mutableStateOf(false)
         private set
-
     var isReady by mutableStateOf(false)
         private set
+    var authBusy by mutableStateOf(false)
+        private set
+    var authMessage by mutableStateOf<Int?>(null)
+        private set
+
+    private fun applyProfile(profile: RemoteProfile) {
+        userName = profile.name
+        userEmail = profile.email
+        hasAccount = true
+        isLoggedIn = true
+    }
+
     init {
         viewModelScope.launch {
-            profileRepository.profileFlow.collect { stored ->
-                userName = stored.name
-                userEmail = stored.email
-                hasAccount = stored.hasAccount
-                isLoggedIn = stored.isLoggedIn
-                isReady = true
-            }
+            try { profileRepository.restore()?.let { applyProfile(it) } }
+            catch (e: java.io.IOException) { authMessage = R.string.auth_network_error }
+            catch (e: AuthFailure) { authMessage = errorFor(e) }
+            catch (e: org.json.JSONException) { authMessage = R.string.auth_server_error }
+            finally { isReady = true }
         }
     }
 
-    /**
-     * Historia #1 · Registro: guarda nombre, correo y contraseña (hasheada) en
-     * el dispositivo. onResult(exito, idDeRecursoDeError).
-     */
+    private fun errorFor(e: Exception): Int = when (e) {
+        is AuthFailure -> when (e.code) {
+            "email_exists" -> R.string.auth_email_exists
+            "invalid_credentials" -> R.string.correo_o_contrase_a_incorrectos
+            "unauthorized" -> R.string.auth_session_expired
+            "invalid_input" -> R.string.auth_invalid_input
+            "rate_limited" -> R.string.auth_rate_limited
+            else -> R.string.auth_server_error
+        }
+        is java.io.IOException -> R.string.auth_network_error
+        else -> R.string.auth_server_error
+    }
+
+    private fun execute(onResult: (Boolean, Int?) -> Unit, action: suspend () -> Unit) {
+        if (authBusy) return
+        authBusy = true
+        authMessage = null
+        viewModelScope.launch {
+            try { action(); onResult(true, null) }
+            catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (e: Exception) {
+                if (e is AuthFailure && e.status == 401) isLoggedIn = false
+                authMessage = errorFor(e)
+                onResult(false, authMessage)
+            } finally { authBusy = false }
+        }
+    }
+
     fun register(name: String, email: String, password: String, onResult: (Boolean, Int?) -> Unit) {
-        val trimmedName = name.trim()
-        val trimmedEmail = email.trim()
         when {
-            trimmedName.isBlank() -> onResult(false, R.string.error_name_empty)
-            trimmedEmail.isBlank() -> onResult(false, R.string.error_email_empty)
-            password.isBlank() -> onResult(false, R.string.error_password_empty)
-            password.length < 4 -> onResult(false, R.string.error_password_short)
-            else -> viewModelScope.launch {
-                profileRepository.registerAccount(trimmedName, trimmedEmail, password)
-                profileRepository.setLoggedIn(true)
-                userName = trimmedName
-                userEmail = trimmedEmail
-                hasAccount = true
-                isLoggedIn = true
-                onResult(true, null)
-            }
+            name.trim().isEmpty() -> onResult(false, R.string.error_name_empty)
+            !android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches() -> onResult(false, R.string.auth_invalid_email)
+            password.length < 8 -> onResult(false, R.string.auth_password_short)
+            else -> execute(onResult) { applyProfile(profileRepository.authenticate(name.trim(), email.trim(), password)) }
         }
     }
 
-    /**
-     * Historia #2 · Login: valida el correo y la contraseña ingresados contra
-     * los guardados al registrarse. onResult(exito, idDeRecursoDeError).
-     */
     fun login(email: String, password: String, onResult: (Boolean, Int?) -> Unit) {
-        val trimmedEmail = email.trim()
-        if (trimmedEmail.isBlank() || password.isBlank()) {
-            onResult(false, R.string.ingresa_correo_y_contrase_a)
-            return
-        }
-        viewModelScope.launch {
-            when (profileRepository.verifyCredentials(trimmedEmail, password)) {
-                LoginResult.SUCCESS -> {
-                    profileRepository.setLoggedIn(true)
-                    isLoggedIn = true
-                    onResult(true, null)
-                }
-                LoginResult.WRONG_CREDENTIALS -> onResult(false, R.string.correo_o_contrase_a_incorrectos)
-                LoginResult.NO_ACCOUNT -> onResult(false, R.string.no_hay_una_cuenta_registrada)
-            }
-        }
+        if (email.isBlank() || password.isBlank()) { onResult(false, R.string.ingresa_correo_y_contrase_a); return }
+        execute(onResult) { applyProfile(profileRepository.authenticate(null, email.trim(), password)) }
     }
 
-    /** Editar perfil: actualiza nombre/correo (no toca la contraseña). */
-    fun updateProfile(name: String, email: String) {
-        val trimmedName = name.trim()
-        val trimmedEmail = email.trim()
-        userName = trimmedName
-        userEmail = trimmedEmail
-        viewModelScope.launch {
-            profileRepository.updateProfile(trimmedName, trimmedEmail)
-        }
+    fun updateProfile(name: String, email: String, onResult: (Boolean, Int?) -> Unit) {
+        execute(onResult) { applyProfile(profileRepository.updateProfile(name.trim(), email.trim())) }
     }
 
-    /** Al cerrar sesión o eliminar cuenta. */
-    fun logout() {
-        viewModelScope.launch {
-            profileRepository.setLoggedIn(false)
+    fun deleteAccount(onResult: (Boolean, Int?) -> Unit) {
+        execute(onResult) {
+            profileRepository.deleteAccount()
             isLoggedIn = false
+            hasAccount = false
+            userName = ""
+            userEmail = ""
+        }
+    }
+
+    fun logout(onDone: () -> Unit) {
+        if (authBusy) return
+        authBusy = true
+        viewModelScope.launch {
+            try { profileRepository.logout() }
+            catch (e: java.io.IOException) { authMessage = R.string.auth_logout_offline }
+            catch (e: AuthFailure) { authMessage = R.string.auth_logout_offline }
+            catch (e: org.json.JSONException) { authMessage = R.string.auth_logout_offline }
+            finally {
+                isLoggedIn = false
+                userName = ""
+                userEmail = ""
+                authBusy = false
+                onDone()
+            }
         }
     }
 
