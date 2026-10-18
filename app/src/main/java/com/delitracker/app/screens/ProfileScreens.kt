@@ -132,11 +132,14 @@ fun EditarPerfilScreen(vm: AppViewModel, onGuardar: () -> Unit) {
             modifier = Modifier.fillMaxWidth()
         )
 
+        vm.authMessage?.let { Text(stringResource(it), color = MaterialTheme.colorScheme.error) }
         Spacer(Modifier.weight(1f))
         Button(
+            enabled = !vm.authBusy,
             onClick = {
-                vm.updateProfile(name = vm.userName, email = vm.userEmail)
-                onGuardar()
+                vm.updateProfile(name = vm.userName, email = vm.userEmail) { success, _ ->
+                    if (success) onGuardar()
+                }
             },
             modifier = Modifier
                 .fillMaxWidth()
@@ -302,7 +305,7 @@ fun ContextoScreen() {
 
 // Historia #19 · Cerrar sesión y eliminar datos
 @Composable
-fun LogoutScreen(onEliminar: () -> Unit, onCancelar: () -> Unit) {
+fun LogoutScreen(vm: AppViewModel, onEliminar: () -> Unit, onCancelar: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -317,8 +320,10 @@ fun LogoutScreen(onEliminar: () -> Unit, onCancelar: () -> Unit) {
             stringResource(R.string.se_borrar_n_tus_datos_personales_del_backend_esta_acci_n_no_se_puede_deshacer),
             fontSize = 12.5.sp, color = DtTheme.colors.textMuted, textAlign = TextAlign.Center
         )
+        vm.authMessage?.let { Text(stringResource(it), color = MaterialTheme.colorScheme.error) }
         Spacer(Modifier.height(16.dp))
         Button(
+            enabled = !vm.authBusy,
             onClick = onEliminar,
             modifier = Modifier
                 .fillMaxWidth()

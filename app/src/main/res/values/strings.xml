@@ -158,4 +158,13 @@
     <string name="ingresa_correo_y_contrase_a">Ingresa correo y contraseña</string>
     <string name="correo_o_contrase_a_incorrectos">Correo o contraseña incorrectos</string>
     <string name="no_hay_una_cuenta_registrada">No hay una cuenta registrada en este dispositivo. Crea una cuenta primero.</string>
+    <string name="auth_network_error">No se pudo conectar al servidor. Comprueba la conexión y que el backend esté iniciado.</string>
+    <string name="auth_server_error">El servidor no pudo completar la solicitud. Intenta de nuevo.</string>
+    <string name="auth_email_exists">Ya existe una cuenta con este correo.</string>
+    <string name="auth_invalid_email">Ingresa un correo válido.</string>
+    <string name="auth_password_short">La contraseña debe tener al menos 8 caracteres.</string>
+    <string name="auth_invalid_input">Revisa el nombre, el correo y la contraseña (8 a 128 caracteres).</string>
+    <string name="auth_session_expired">La sesión venció. Inicia sesión de nuevo.</string>
+    <string name="auth_rate_limited">Demasiados intentos. Espera un minuto.</string>
+    <string name="auth_logout_offline">Sesión cerrada en este dispositivo. No se pudo revocar en el servidor; vencerá automáticamente.</string>
 </resources>
