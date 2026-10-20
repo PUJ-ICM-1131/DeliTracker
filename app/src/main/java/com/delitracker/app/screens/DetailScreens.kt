@@ -1,5 +1,25 @@
 package com.delitracker.app.screens
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import coil.compose.AsyncImage
+import com.delitracker.app.components.RouteMap
+import com.delitracker.app.components.rememberPhotoPicker
+import com.delitracker.app.route.LatLon
+import com.delitracker.app.route.RouteOutcome
+import com.delitracker.app.route.RouteRepository
+import com.delitracker.app.route.SampleRestaurants
+import com.delitracker.app.route.TravelProfile
+import com.delitracker.app.route.hasLocationPermission
+import com.delitracker.app.route.requestCurrentLocation
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import kotlin.math.roundToInt
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -99,46 +119,105 @@ fun DetalleScreen(vm: AppViewModel, onVerAr: () -> Unit, onResena: () -> Unit, o
 @Composable
 fun RutaScreen(vm: AppViewModel, onFinalizar: () -> Unit) {
     val colors = DtTheme.colors
+    val context = LocalContext.current
+
+    val restaurantDestination = SampleRestaurants.TRATTORIA_SOLE
+    var destination by remember { mutableStateOf(restaurantDestination) }
+    var origin by remember { mutableStateOf<LatLon?>(null) }
+    var locating by remember { mutableStateOf(true) }
+    var loadingRoute by remember { mutableStateOf(false) }
+    var outcome by remember { mutableStateOf<RouteOutcome?>(null) }
+
+    fun locate() {
+        locating = true
+        requestCurrentLocation(context) { result ->
+            origin = result
+            locating = false
+        }
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        if (hasLocationPermission(context)) locate() else locating = false
+    }
+
+    LaunchedEffect(Unit) {
+        if (hasLocationPermission(context)) locate()
+        else permissionLauncher.launch(
+            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
+        )
+    }
+
+    // "Bus" no existe en el servicio de rutas: se calcula como vehículo
+    val profile = if (vm.travelMode == "walk") TravelProfile.WALK else TravelProfile.CAR
+
+    // Se vuelve a pedir la ruta cuando cambia el origen, el destino o el modo de viaje
+    LaunchedEffect(origin, destination, profile) {
+        val from = origin
+        if (from == null) {
+            outcome = null
+        } else {
+            loadingRoute = true
+            outcome = RouteRepository.fetchRoute(from, destination, profile)
+            loadingRoute = false
+        }
+    }
+
+    val destinationLabel = if (destination == restaurantDestination) stringResource(R.string.trattoria_sole)
+    else stringResource(R.string.ruta_destino_elegido)
+
     Column(modifier = Modifier
         .fillMaxSize()
         .padding(16.dp)) {
-        Box(
+        RouteMap(
+            origin = origin,
+            destination = destination,
+            route = (outcome as? RouteOutcome.Success)?.route?.points.orEmpty(),
+            originLabel = stringResource(R.string.map_mi_ubicacion),
+            destinationLabel = destinationLabel,
+            onMapTap = { destination = it },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(190.dp)
+                .height(300.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(colors.accentSoft)
-        ) {
-            Icon(
-                Icons.Filled.LocationOn, contentDescription = null, tint = colors.accentSoftInk,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(20.dp)
-                    .size(28.dp)
-            )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(24.dp)
-                    .size(10.dp)
-                    .clip(RoundedCornerShape(50))
-                    .background(colors.accentSoftInk)
-            )
-        }
+        )
         Spacer(Modifier.height(10.dp))
         Surface(shape = RoundedCornerShape(10.dp), color = colors.surface2, modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(stringResource(R.string._8_min), fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                    Text(stringResource(R.string._650_m), fontSize = 12.sp, color = colors.textMuted)
+                when {
+                    locating -> Text(stringResource(R.string.ruta_ubicando), fontSize = 12.sp, color = colors.textMuted)
+                    origin == null -> {
+                        Text(stringResource(R.string.ruta_sin_ubicacion), fontSize = 12.sp, color = colors.textMuted)
+                        TextButton(onClick = {
+                            if (hasLocationPermission(context)) locate()
+                            else permissionLauncher.launch(
+                                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
+                            )
+                        }) { Text(stringResource(R.string.ruta_reintentar)) }
+                    }
+                    loadingRoute -> Text(stringResource(R.string.ruta_calculando), fontSize = 12.sp, color = colors.textMuted)
+                    outcome is RouteOutcome.Failure -> Text(
+                        stringResource((outcome as RouteOutcome.Failure).messageRes),
+                        fontSize = 12.sp, color = MaterialTheme.colorScheme.error
+                    )
+                    outcome is RouteOutcome.Success -> {
+                        val route = (outcome as RouteOutcome.Success).route
+                        val minutes = (route.durationSeconds / 60).roundToInt().coerceAtLeast(1)
+                        val arrival = SimpleDateFormat("h:mm a", Locale.getDefault())
+                            .format(Date(System.currentTimeMillis() + (route.durationSeconds * 1000).toLong()))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text(stringResource(R.string.ruta_minutos, minutes), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            Text(formatRouteDistance(route.distanceMeters), fontSize = 12.sp, color = colors.textMuted)
+                        }
+                        Text(stringResource(R.string.ruta_llegada, arrival), fontSize = 11.5.sp, color = colors.textMuted)
+                    }
                 }
-                Text(stringResource(R.string.llegada_12_48_pm), fontSize = 11.5.sp, color = colors.textMuted)
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     DtChip(label = stringResource(R.string.a_pie), selected = vm.travelMode == "walk", onClick = { vm.travelMode = "walk" })
                     DtChip(label = stringResource(R.string.auto), selected = vm.travelMode == "auto", onClick = { vm.travelMode = "auto" })
                     DtChip(label = stringResource(R.string.bus), selected = vm.travelMode == "bus", onClick = { vm.travelMode = "bus" })
                 }
+                Text(stringResource(R.string.ruta_tip_toque), fontSize = 10.5.sp, color = colors.textMuted, modifier = Modifier.padding(top = 6.dp))
             }
         }
         Spacer(Modifier.weight(1f))
@@ -153,6 +232,11 @@ fun RutaScreen(vm: AppViewModel, onFinalizar: () -> Unit) {
             )) }
     }
 }
+
+@Composable
+private fun formatRouteDistance(meters: Double): String =
+    if (meters < 1000) stringResource(R.string.ruta_metros, meters.roundToInt())
+    else stringResource(R.string.ruta_km, meters / 1000.0)
 
 // Historia #17 · Reseña y calificación
 @Composable
@@ -187,15 +271,28 @@ fun ResenaScreen(vm: AppViewModel, onPublicar: () -> Unit) {
                 .fillMaxWidth()
                 .height(100.dp)
         )
+        val reviewPhotoPicker = rememberPhotoPicker("review") { vm.setReviewPhoto(it) }
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 8.dp),
+                .padding(top = 8.dp)
+                .clickable { reviewPhotoPicker.showOptions() },
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(Icons.Filled.CameraAlt, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(6.dp))
             Text(stringResource(R.string.agregar_foto), color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
+        }
+        vm.reviewPhotoPath?.takeIf { File(it).exists() }?.let { path ->
+            AsyncImage(
+                model = File(path),
+                contentDescription = stringResource(R.string.agregar_foto),
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .padding(top = 8.dp)
+                    .size(72.dp)
+                    .clip(RoundedCornerShape(10.dp))
+            )
         }
         Spacer(Modifier.weight(1f))
         Button(onClick = onPublicar, modifier = Modifier

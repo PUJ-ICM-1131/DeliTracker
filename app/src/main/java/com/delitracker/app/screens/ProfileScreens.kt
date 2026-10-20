@@ -29,6 +29,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.delitracker.app.R
 import com.delitracker.app.components.DtRow
+import com.delitracker.app.components.ProfileAvatar
+import com.delitracker.app.components.rememberPhotoPicker
 import com.delitracker.app.state.AppViewModel
 import com.delitracker.app.ui.theme.DtAccent2
 import com.delitracker.app.ui.theme.DtDanger
@@ -46,17 +48,14 @@ fun PerfilScreen(
     Column(modifier = Modifier
         .fillMaxSize()
         .padding(16.dp)) {
-        Box(
+        ProfileAvatar(
+            photoPath = vm.userPhotoPath,
+            initials = initialsOf(vm.userName),
+            size = 72.dp,
             modifier = Modifier
-                .size(72.dp)
                 .align(Alignment.CenterHorizontally)
-                .clip(CircleShape)
-                .background(DtTheme.colors.accentSoft)
-                .clickable(onClick = onEditarPerfil),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(initialsOf(vm.userName), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = DtTheme.colors.accentSoftInk)
-        }
+                .clickable(onClick = onEditarPerfil)
+        )
         Spacer(Modifier.height(8.dp))
         Text(vm.userName, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.align(Alignment.CenterHorizontally))
         Text(vm.userEmail, fontSize = 12.sp, color = DtTheme.colors.textMuted, modifier = Modifier.align(Alignment.CenterHorizontally))
@@ -102,17 +101,18 @@ fun EditarPerfilScreen(vm: AppViewModel, onGuardar: () -> Unit) {
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(
-            modifier = Modifier
-                .size(72.dp)
-                .clip(CircleShape)
-                .background(DtTheme.colors.accentSoft),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(initialsOf(vm.userName), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = DtTheme.colors.accentSoftInk)
-        }
+        val photoPicker = rememberPhotoPicker("profile") { vm.setProfilePhoto(it) }
+        ProfileAvatar(
+            photoPath = vm.userPhotoPath,
+            initials = initialsOf(vm.userName),
+            size = 72.dp,
+            modifier = Modifier.clickable { photoPicker.showOptions() }
+        )
         Spacer(Modifier.height(4.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.clickable { photoPicker.showOptions() }
+        ) {
             Icon(Icons.Filled.CameraAlt, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
             Spacer(Modifier.width(4.dp))
             Text(stringResource(R.string.cambiar_foto_desde_galer_a), color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
