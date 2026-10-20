@@ -14,9 +14,11 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -26,6 +28,8 @@ import com.delitracker.app.R
 import com.delitracker.app.nav.Routes
 import com.delitracker.app.nav.TopBarStyle
 import com.delitracker.app.ui.theme.DtTheme
+import coil.compose.AsyncImage
+import java.io.File
 
 /** Equivalente a topbar(title, opts) del prototipo. */
 @OptIn(ExperimentalMaterial3Api::class)
