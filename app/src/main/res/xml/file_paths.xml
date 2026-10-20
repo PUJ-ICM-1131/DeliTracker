@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Carpeta privada donde ImageStorage guarda las fotos (filesDir/images) y que el FileProvider comparte con la cámara -->
-<paths>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
     <files-path name="images" path="images/" />
 </paths>

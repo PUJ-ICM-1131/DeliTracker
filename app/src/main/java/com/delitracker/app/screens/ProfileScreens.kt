@@ -60,6 +60,7 @@ fun PerfilScreen(
         Spacer(Modifier.height(8.dp))
         Text(vm.userName, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.align(Alignment.CenterHorizontally))
         Text(vm.userEmail, fontSize = 12.sp, color = DtTheme.colors.textMuted, modifier = Modifier.align(Alignment.CenterHorizontally))
+        vm.authMessage?.let { Text(stringResource(it), color = MaterialTheme.colorScheme.primary) }
 
         Spacer(Modifier.height(12.dp))
         DtRow(onClick = onFavoritos) {

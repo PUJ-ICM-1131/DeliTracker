@@ -30,7 +30,6 @@ import com.delitracker.app.nav.Routes
 import com.delitracker.app.nav.TopBarStyle
 import com.delitracker.app.ui.theme.DtTheme
 import java.io.File
-
 /** Equivalente a topbar(title, opts) del prototipo. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

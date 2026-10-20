@@ -155,8 +155,17 @@ fun LoginScreen(vm: AppViewModel, onIniciarSesion: () -> Unit, onIrARegistro: ()
             Text(stringResource(R.string.iniciar_sesi_n))
         }
         Spacer(Modifier.height(6.dp))
-        vm.authMessage?.let { Text(stringResource(it), color = MaterialTheme.colorScheme.error) }
+        TextButton(enabled = !vm.authBusy, onClick = { vm.resetPassword(email) }) {
+            Text(stringResource(R.string.olvidaste_tu_contrase_a))
+        }
+        vm.authMessage?.let {
+            Text(stringResource(it), color = if (it == R.string.auth_password_reset_sent)
+                MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+        }
         if (vm.authBusy) CircularProgressIndicator()
+        if (com.delitracker.app.BuildConfig.FIREBASE_AUTH_EMULATOR) {
+            Text("Firebase local: cuentas de prueba", color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
+        }
 
         Spacer(Modifier.weight(1f))
         TextButton(enabled = !vm.authBusy, onClick = onIrARegistro) { Text(stringResource(R.string.crear_una_cuenta_nueva)) }

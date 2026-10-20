@@ -13,19 +13,19 @@
 <rect x="400" y="100" width="280" height="220" rx="12" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/>
 <text x="416" y="130" font-family="Arial" font-size="16" fill="#0f172a">AppViewModel</text>
 <text x="416" y="155" font-family="Arial" font-size="16" fill="#0f172a">- profileRepository</text>
-<text x="416" y="180" font-family="Arial" font-size="16" fill="#0f172a">+ register() / login()</text>
+<text x="416" y="180" font-family="Arial" font-size="16" fill="#0f172a">Registro y acceso por correo</text>
 <text x="416" y="205" font-family="Arial" font-size="16" fill="#0f172a">+ updateProfile()</text>
 <text x="416" y="230" font-family="Arial" font-size="16" fill="#0f172a">+ logout() / deleteAccount()</text>
 <text x="416" y="255" font-family="Arial" font-size="16" fill="#0f172a">+ isLoggedIn / authBusy</text>
 <rect x="780" y="100" width="290" height="190" rx="12" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/>
 <text x="796" y="130" font-family="Arial" font-size="16" fill="#0f172a">UserProfileRepository</text>
-<text x="796" y="155" font-family="Arial" font-size="16" fill="#0f172a">- token / session</text>
+<text x="796" y="155" font-family="Arial" font-size="16" fill="#0f172a">- auth / currentUser</text>
 <text x="796" y="180" font-family="Arial" font-size="16" fill="#0f172a">+ authenticate() / restore()</text>
 <text x="796" y="205" font-family="Arial" font-size="16" fill="#0f172a">+ updateProfile()</text>
 <text x="796" y="230" font-family="Arial" font-size="16" fill="#0f172a">+ logout() / deleteAccount()</text>
 <rect x="780" y="400" width="290" height="170" rx="12" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/>
-<text x="796" y="430" font-family="Arial" font-size="16" fill="#0f172a">Handler → AuthStore</text>
-<text x="796" y="455" font-family="Arial" font-size="16" fill="#0f172a">+ register() / login()</text>
-<text x="796" y="480" font-family="Arial" font-size="16" fill="#0f172a">+ account() / logout()</text>
-<text x="796" y="505" font-family="Arial" font-size="16" fill="#0f172a">SQLite: users 1 — N sessions</text>
+<text x="796" y="430" font-family="Arial" font-size="16" fill="#0f172a">Firebase Authentication</text>
+<text x="796" y="455" font-family="Arial" font-size="16" fill="#0f172a">Registro y acceso por correo</text>
+<text x="796" y="480" font-family="Arial" font-size="16" fill="#0f172a">Perfil, cierre y eliminación</text>
+<text x="796" y="505" font-family="Arial" font-size="16" fill="#0f172a">Cuentas y sesiones en la nube</text>
 </svg>
