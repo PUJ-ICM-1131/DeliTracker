@@ -1,0 +1,9 @@
+{
+  "name": "delitracker-firebase",
+  "private": true,
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "firebase:local": "firebase emulators:start --only auth --project demo-delitracker"
+  },
+  "devDependencies": { "firebase-tools": "14.22.0" }
+}
