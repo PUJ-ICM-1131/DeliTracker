@@ -14,7 +14,7 @@ import com.delitracker.app.storage.ImageStorage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/** Estado de interfaz y sesión validada por el backend del proyecto. */
+/** Estado de interfaz y sesión validada por Firebase Authentication. */
 class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     private val profileRepository = UserProfileRepository(application)
@@ -99,9 +99,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     init {
         viewModelScope.launch {
             try { profileRepository.restore()?.let { applyProfile(it) } }
-            catch (e: java.io.IOException) { authMessage = R.string.auth_network_error }
-            catch (e: AuthFailure) { authMessage = errorFor(e) }
-            catch (e: org.json.JSONException) { authMessage = R.string.auth_server_error }
+            catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (e: Exception) { authMessage = errorFor(e) }
             finally { isReady = true }
         }
     }
@@ -113,6 +112,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             "unauthorized" -> R.string.auth_session_expired
             "invalid_input" -> R.string.auth_invalid_input
             "rate_limited" -> R.string.auth_rate_limited
+            "network_error" -> R.string.auth_network_error
+            "firebase_not_configured" -> R.string.auth_firebase_not_configured
+            "provider_disabled" -> R.string.auth_provider_disabled
+            "recent_login_required" -> R.string.auth_recent_login_required
+            "invalid_email" -> R.string.auth_invalid_email
+            "weak_password" -> R.string.auth_password_policy
+            "profile_incomplete" -> R.string.auth_profile_incomplete
             else -> R.string.auth_server_error
         }
         is java.io.IOException -> R.string.auth_network_error
@@ -154,6 +160,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val updated = profileRepository.updateProfile(name.trim(), email.trim())
         photoStore.move(oldEmail, updated.email)
         applyProfile(updated)
+        if (updated.emailVerificationPending) authMessage = R.string.auth_email_verification_sent
     }
 }
 
@@ -172,9 +179,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 }
 
+    fun resetPassword(email: String) {
+        execute({ success, _ -> if (success) authMessage = R.string.auth_password_reset_sent }) {
+            profileRepository.sendPasswordReset(email)
+        }
+    }
+
     fun logout(onDone: () -> Unit) {
         if (authBusy) return
         authBusy = true
+        authMessage = null
         viewModelScope.launch {
             try { profileRepository.logout() }
             catch (e: java.io.IOException) { authMessage = R.string.auth_logout_offline }
