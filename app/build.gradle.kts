@@ -3,6 +3,13 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+val useAuthEmulator = providers.gradleProperty("FIREBASE_AUTH_EMULATOR").orNull == "true"
+val emulatorHost = providers.gradleProperty("FIREBASE_EMULATOR_HOST").getOrElse("10.0.2.2")
+require(emulatorHost.matches(Regex("[A-Za-z0-9.:-]+"))) { "FIREBASE_EMULATOR_HOST no es válido" }
+if (file("google-services.json").isFile && !useAuthEmulator) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 android {
     namespace = "com.delitracker.app"
     compileSdk = 34
@@ -13,12 +20,16 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
-        val authUrl = providers.gradleProperty("AUTH_BASE_URL").getOrElse("http://10.0.2.2:8080")
-        require(authUrl.matches(Regex("https?://[A-Za-z0-9.:-]+/?"))) { "AUTH_BASE_URL debe ser una URL HTTP(S) sin ruta" }
-        buildConfigField("String", "AUTH_BASE_URL", "\"${authUrl.trimEnd('/')}\"")
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("boolean", "FIREBASE_AUTH_EMULATOR", "false")
+        buildConfigField("String", "FIREBASE_EMULATOR_HOST", "\"$emulatorHost\"")
     }
 
     buildTypes {
+        debug {
+            buildConfigField("boolean", "FIREBASE_AUTH_EMULATOR", useAuthEmulator.toString())
+            if (useAuthEmulator) applicationIdSuffix = ".local"
+        }
         release {
             isMinifyEnabled = false
         }
@@ -49,7 +60,24 @@ android {
     }
 }
 
+val verifyFirebaseConfiguration by tasks.registering {
+    doLast {
+        check(!useAuthEmulator) { "Una entrega release no puede usar Firebase local" }
+        check(file("google-services.json").isFile) {
+            "Falta app/google-services.json del proyecto Firebase. No se puede generar una entrega conectada a la nube."
+        }
+    }
+}
+tasks.matching { it.name == "preReleaseBuild" }.configureEach {
+    dependsOn(verifyFirebaseConfiguration)
+}
+
 dependencies {
+    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
+    implementation("com.google.firebase:firebase-auth")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
+    androidTestImplementation("androidx.test:runner:1.5.2")
+    androidTestImplementation("androidx.test.ext:junit:1.1.5")
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("androidx.datastore:datastore-preferences:1.1.1")
