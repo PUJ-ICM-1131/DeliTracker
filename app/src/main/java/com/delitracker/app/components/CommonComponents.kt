@@ -24,12 +24,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.delitracker.app.R
 import com.delitracker.app.nav.Routes
 import com.delitracker.app.nav.TopBarStyle
 import com.delitracker.app.ui.theme.DtTheme
-import coil.compose.AsyncImage
-import java.io.File
 
 /** Equivalente a topbar(title, opts) del prototipo. */
 @OptIn(ExperimentalMaterial3Api::class)
