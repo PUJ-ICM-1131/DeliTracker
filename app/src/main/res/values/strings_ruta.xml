@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ruta_ubicando">Obteniendo tu ubicación…</string>
+    <string name="ruta_sin_ubicacion">No se pudo obtener tu ubicación. Activa el GPS y concede el permiso para trazar la ruta.</string>
+    <string name="ruta_reintentar">Reintentar</string>
+    <string name="ruta_calculando">Calculando ruta…</string>
+    <string name="ruta_minutos">%1$d min</string>
+    <string name="ruta_llegada">Llegada: %1$s</string>
+    <string name="ruta_metros">%1$d m</string>
+    <string name="ruta_km">%1$.1f km</string>
+    <string name="ruta_destino_elegido">Destino elegido</string>
+    <string name="ruta_tip_toque">Toca el mapa para cambiar el destino.</string>
+</resources>
