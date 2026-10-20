@@ -18,7 +18,6 @@ local.properties
 /.gradle-local/
 /originales/
 /app/build/
-/app/google-services.json
 /node_modules/
 /.firebase/
 firebase-debug.log*

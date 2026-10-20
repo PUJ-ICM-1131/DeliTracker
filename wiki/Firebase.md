@@ -6,9 +6,9 @@ La aplicación usa el SDK de Firebase Authentication para registrar cuentas, ini
 restaurar la sesión, editar el nombre, verificar cambios de correo, recuperar contraseñas y eliminar cuentas.
 Ya no usa la dirección del computador ni el servidor Python para autenticar usuarios.
 
-Todavía falta la configuración de un proyecto Firebase real del equipo. No se ha creado ni desplegado
-un proyecto en la nube. Sin esa configuración, la aplicación informa que falta conectar Firebase.
-El modo local descrito más abajo permite probar la integración sin una cuenta de Google.
+El proyecto real configurado es `delitracker-bd700` y la aplicación registrada es `com.delitracker.app`.
+El archivo real está en `app/google-services.json` y el acceso con correo electrónico/contraseña está habilitado.
+La compilación normal se conecta a Firebase por Internet y no necesita el servidor local.
 
 ## Conectar el proyecto real una sola vez
 
@@ -25,7 +25,7 @@ El mínimo del proyecto es Android 7.0 (API 24). El correo debe permitir recibir
 Las cuentas anteriores de SQLite no se migran automáticamente: se deben crear en Firebase.
 
 No utilizar una clave de cuenta de servicio ni Firebase Admin dentro de Android. El archivo requerido es
-la configuración del cliente Android descargada desde Firebase. Está excluido de Git en esta copia.
+la configuración del cliente Android descargada desde Firebase. Se incluye en el repositorio para que el equipo compile contra el mismo proyecto Firebase; no es una clave de administración.
 Antes de distribuir una versión release, la compilación exige el archivo real y rechaza el modo local.
 
 ## Iniciar Firebase local en cualquier computador
@@ -111,4 +111,4 @@ Se bloquea si la compilación no utiliza explícitamente el proyecto de pruebas 
 - Verificación de configuración: rechaza generar una entrega release cuando falta el archivo real.
 - APK de pruebas: `entrega/DeliTracker-Firebase-local-debug.apk`. Requiere Firebase local iniciado; no es un APK conectado a la nube.
 - Informe Android: `entrega/informe-pruebas/index.html`.
-- Conexión con un proyecto real y envío de correos reales: pendientes de configurar el proyecto Firebase del equipo.
+- Configuración real integrada para delitracker-bd700. Comprobada la respuesta de Authentication en la nube con credenciales inexistentes rechazadas. El registro y la entrega de correos reales deben probarse desde la aplicación.
