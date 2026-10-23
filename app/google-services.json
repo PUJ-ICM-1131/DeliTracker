@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "395401662693",
+    "project_id": "delitracker-bd700",
+    "storage_bucket": "delitracker-bd700.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:395401662693:android:341d5e2b8c6a3931e6040c",
+        "android_client_info": {
+          "package_name": "com.delitracker.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCXlnW5BpEhucfOpva2fns2d2YepJudLXY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
