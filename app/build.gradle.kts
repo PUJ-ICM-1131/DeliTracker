@@ -1,3 +1,4 @@
+import java.util.Properties
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -7,7 +8,7 @@ val useAuthEmulator = providers.gradleProperty("FIREBASE_AUTH_EMULATOR").orNull 
 val emulatorHost = providers.gradleProperty("FIREBASE_EMULATOR_HOST").getOrElse("10.0.2.2")
 require(emulatorHost.matches(Regex("[A-Za-z0-9.:-]+"))) { "FIREBASE_EMULATOR_HOST no es válido" }
 // Clave de Geoapify (lugares y rutas): se lee de local.properties (que Git ignora) o de una propiedad de Gradle
-val localProperties = java.util.Properties().apply {
+val localProperties = Properties().apply {
     val file = rootProject.file("local.properties")
     if (file.isFile) file.inputStream().use { load(it) }
 }
