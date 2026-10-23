@@ -1,6 +1,21 @@
 package com.delitracker.app.screens
 
 import android.Manifest
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
+import android.graphics.BitmapFactory
+import android.net.Uri
+import android.widget.Toast
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.vector.ImageVector
+import com.delitracker.app.reviews.summary
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.layout.ContentScale
@@ -11,7 +26,7 @@ import com.delitracker.app.components.rememberPhotoPicker
 import com.delitracker.app.route.LatLon
 import com.delitracker.app.route.RouteOutcome
 import com.delitracker.app.route.RouteRepository
-import com.delitracker.app.route.SampleRestaurants
+import com.delitracker.app.route.distanceMeters
 import com.delitracker.app.route.TravelProfile
 import com.delitracker.app.route.hasLocationPermission
 import com.delitracker.app.route.requestCurrentLocation
@@ -47,6 +62,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.delitracker.app.R
 import com.delitracker.app.components.DtChip
+import com.delitracker.app.data.displayCuisine
+import com.delitracker.app.data.displayName
 import com.delitracker.app.state.AppViewModel
 import com.delitracker.app.ui.theme.DtTheme
 import com.delitracker.app.ui.theme.DtWarning
@@ -54,64 +71,180 @@ import com.delitracker.app.ui.theme.DtWarning
 // Historia #15 · Ficha de detalle de un restaurante
 @Composable
 fun DetalleScreen(vm: AppViewModel, onVerAr: () -> Unit, onResena: () -> Unit, onTrazarRuta: () -> Unit) {
+    val context = LocalContext.current
+    val restaurant = vm.currentRestaurant
+    val name = restaurant.displayName()
+    val cuisine = restaurant.displayCuisine()
+    val distance = vm.userLocation?.let { distanceMeters(it, restaurant.position) }
+    val summary = vm.reviews.summary()
+
+    // Las reseñas (calificación y fotos) son de los usuarios de la app y viven en Firebase
+    LaunchedEffect(restaurant.id, vm.isLoggedIn) { vm.loadReviews() }
+
     Column(modifier = Modifier
         .fillMaxSize()
         .padding(16.dp)) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(120.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(DtTheme.colors.surface2),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(Icons.Filled.Photo, contentDescription = null, tint = DtTheme.colors.textMuted, modifier = Modifier.size(32.dp))
-        }
-        Spacer(Modifier.height(10.dp))
-        Text(stringResource(R.string.trattoria_sole), fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(stringResource(R.string.italiana_precios), fontSize = 12.sp, color = DtTheme.colors.textMuted)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.Star, contentDescription = null, tint = DtWarning, modifier = Modifier.size(14.dp))
-                Spacer(Modifier.width(4.dp))
-                Text(stringResource(R.string._4_6), fontSize = 12.sp, color = DtTheme.colors.textMuted)
+        Column(modifier = Modifier
+            .weight(1f)
+            .verticalScroll(rememberScrollState())) {
+            // Foto: la de la reseña más reciente que tenga una; si no hay, un recuadro vacío
+            val heroPhoto = vm.reviews.firstOrNull { it.photo != null }?.photo
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(140.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(DtTheme.colors.surface2),
+                contentAlignment = Alignment.Center
+            ) {
+                if (heroPhoto != null) {
+                    ReviewPhoto(heroPhoto, Modifier.fillMaxSize())
+                } else {
+                    Icon(Icons.Filled.Photo, contentDescription = null, tint = DtTheme.colors.textMuted, modifier = Modifier.size(32.dp))
+                }
             }
-        }
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(stringResource(R.string.abierto_hasta_10_00_pm), fontSize = 12.sp, color = DtTheme.colors.textMuted)
-            Text(stringResource(R.string._0_4_km), fontSize = 12.sp, color = DtTheme.colors.textMuted)
-        }
+            Spacer(Modifier.height(10.dp))
+            Text(name, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(cuisine, fontSize = 12.sp, color = DtTheme.colors.textMuted)
+                if (summary != null) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.Star, contentDescription = null, tint = DtWarning, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            stringResource(R.string.review_promedio, summary.average, summary.count),
+                            fontSize = 12.sp, color = DtTheme.colors.textMuted
+                        )
+                    }
+                }
+            }
+            if (distance != null) {
+                Text(formatRouteDistance(distance), fontSize = 12.sp, color = DtTheme.colors.textMuted)
+            }
 
-        Spacer(Modifier.height(10.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            OutlinedButton(onClick = { vm.toggleFavorited() }, modifier = Modifier.weight(1f)) {
-                Icon(
-                    if (vm.favorited) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp)
+            // Datos de OpenStreetMap: solo se muestran los que existen
+            Spacer(Modifier.height(6.dp))
+            restaurant.address?.let { InfoLine(Icons.Filled.LocationOn, it) }
+            restaurant.openingHours?.let { InfoLine(Icons.Filled.AccessTime, it) }
+            restaurant.phone?.let { phone ->
+                InfoLine(Icons.Filled.Phone, phone) {
+                    openExternal(context, Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(phone))))
+                }
+            }
+            restaurant.website?.let { site ->
+                InfoLine(Icons.Filled.Language, site) {
+                    val url = if (site.startsWith("http", ignoreCase = true)) site else "https://$site"
+                    openExternal(context, Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(onClick = { vm.toggleFavorite(name) }, modifier = Modifier.weight(1f)) {
+                    Icon(
+                        if (vm.isFavorite(name)) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(stringResource(R.string.favorito), fontSize = 11.sp)
+                }
+                OutlinedButton(onClick = onResena, modifier = Modifier.weight(1f)) {
+                    Icon(Icons.Filled.StarBorder, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(stringResource(R.string.rese_a), fontSize = 11.sp)
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(onClick = onVerAr, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Filled.CameraAlt, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(stringResource(R.string.ver_men_con_ar), fontSize = 12.sp)
+            }
+
+            // Reseñas
+            Spacer(Modifier.height(14.dp))
+            Text(stringResource(R.string.review_titulo), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            when {
+                vm.reviewsError != null -> Text(
+                    stringResource(vm.reviewsError!!), fontSize = 11.5.sp, color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(top = 4.dp)
                 )
-                Spacer(Modifier.width(4.dp))
-                Text(stringResource(R.string.favorito), fontSize = 11.sp)
+                vm.reviewsLoading -> Text(stringResource(R.string.review_cargando), fontSize = 11.5.sp, color = DtTheme.colors.textMuted, modifier = Modifier.padding(top = 4.dp))
+                vm.reviews.isEmpty() -> Text(stringResource(R.string.review_sin_resenas), fontSize = 11.5.sp, color = DtTheme.colors.textMuted, modifier = Modifier.padding(top = 4.dp))
             }
-            OutlinedButton(onClick = onResena, modifier = Modifier.weight(1f)) {
-                Icon(Icons.Filled.StarBorder, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(4.dp))
-                Text(stringResource(R.string.rese_a), fontSize = 11.sp)
+            vm.reviews.forEach { review ->
+                Column(modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(review.userName, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                        (1..5).forEach { n ->
+                            Icon(
+                                if (n <= review.stars) Icons.Filled.Star else Icons.Filled.StarBorder,
+                                contentDescription = null, tint = DtWarning, modifier = Modifier.size(13.dp)
+                            )
+                        }
+                    }
+                    if (review.text.isNotBlank()) {
+                        Text(review.text, fontSize = 12.sp, color = DtTheme.colors.textMuted, modifier = Modifier.padding(top = 2.dp))
+                    }
+                    review.photo?.let {
+                        ReviewPhoto(
+                            it,
+                            Modifier
+                                .padding(top = 6.dp)
+                                .height(120.dp)
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                        )
+                    }
+                    Divider(color = DtTheme.colors.border, thickness = 0.6.dp, modifier = Modifier.padding(top = 10.dp))
+                }
             }
-        }
-        Spacer(Modifier.height(8.dp))
-        OutlinedButton(onClick = onVerAr, modifier = Modifier.fillMaxWidth()) {
-            Icon(Icons.Filled.CameraAlt, contentDescription = null, modifier = Modifier.size(16.dp))
-            Spacer(Modifier.width(6.dp))
-            Text(stringResource(R.string.ver_men_con_ar), fontSize = 12.sp)
+            Spacer(Modifier.height(12.dp))
         }
 
-        Spacer(Modifier.weight(1f))
         Button(onClick = onTrazarRuta, modifier = Modifier
             .fillMaxWidth()
             .height(46.dp)) {
             Text(stringResource(R.string.trazar_ruta))
         }
+    }
+}
+
+@Composable
+private fun InfoLine(icon: ImageVector, text: String, onClick: (() -> Unit)? = null) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(vertical = 3.dp)
+    ) {
+        Icon(icon, contentDescription = null, tint = DtTheme.colors.textMuted, modifier = Modifier.size(15.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text, fontSize = 12.sp,
+            color = if (onClick != null) MaterialTheme.colorScheme.primary else DtTheme.colors.textMuted
+        )
+    }
+}
+
+private fun openExternal(context: Context, intent: Intent) {
+    try {
+        context.startActivity(intent)
+    } catch (e: ActivityNotFoundException) {
+        Toast.makeText(context, R.string.review_sin_app, Toast.LENGTH_SHORT).show()
+    }
+}
+
+/** Foto de una reseña (JPEG guardado en Firestore). */
+@Composable
+private fun ReviewPhoto(bytes: ByteArray, modifier: Modifier = Modifier) {
+    val bitmap = remember(bytes) { BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap() }
+    if (bitmap != null) {
+        Image(bitmap = bitmap, contentDescription = null, contentScale = ContentScale.Crop, modifier = modifier)
     }
 }
 
@@ -121,7 +254,8 @@ fun RutaScreen(vm: AppViewModel, onFinalizar: () -> Unit) {
     val colors = DtTheme.colors
     val context = LocalContext.current
 
-    val restaurantDestination = SampleRestaurants.TRATTORIA_SOLE
+    val restaurant = vm.currentRestaurant
+    val restaurantDestination = restaurant.position
     var destination by remember { mutableStateOf(restaurantDestination) }
     var origin by remember { mutableStateOf<LatLon?>(null) }
     var locating by remember { mutableStateOf(true) }
@@ -162,7 +296,7 @@ fun RutaScreen(vm: AppViewModel, onFinalizar: () -> Unit) {
         }
     }
 
-    val destinationLabel = if (destination == restaurantDestination) stringResource(R.string.trattoria_sole)
+    val destinationLabel = if (destination == restaurantDestination) restaurant.displayName()
     else stringResource(R.string.ruta_destino_elegido)
 
     Column(modifier = Modifier
@@ -248,7 +382,7 @@ fun ResenaScreen(vm: AppViewModel, onPublicar: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(stringResource(R.string.califica_tu_visita), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-        Text(stringResource(R.string.trattoria_sole), fontSize = 12.sp, color = DtTheme.colors.textMuted)
+        Text(vm.currentRestaurant.displayName(), fontSize = 12.sp, color = DtTheme.colors.textMuted)
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             (1..5).forEach { n ->
@@ -294,11 +428,18 @@ fun ResenaScreen(vm: AppViewModel, onPublicar: () -> Unit) {
                     .clip(RoundedCornerShape(10.dp))
             )
         }
+        vm.reviewMessage?.let {
+            Text(stringResource(it), fontSize = 11.5.sp, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp))
+        }
         Spacer(Modifier.weight(1f))
-        Button(onClick = onPublicar, modifier = Modifier
-            .fillMaxWidth()
-            .height(46.dp)) {
-            Text(stringResource(R.string.publicar_resena))
+        Button(
+            enabled = !vm.reviewBusy,
+            onClick = { vm.publishReview { ok -> if (ok) onPublicar() } },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(46.dp)
+        ) {
+            Text(stringResource(if (vm.reviewBusy) R.string.review_publicando else R.string.publicar_resena))
         }
     }
 }

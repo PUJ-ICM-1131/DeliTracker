@@ -1,6 +1,9 @@
 package com.delitracker.app.data
 
+import android.content.Context
 import androidx.annotation.StringRes
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import com.delitracker.app.R
 import com.delitracker.app.route.LatLon
 import com.delitracker.app.route.SampleRestaurants
@@ -10,17 +13,34 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * Restaurante de ejemplo para el mapa. Mientras no se conecte la API externa
- * (Foursquare Places), esta lista alimenta el mapa. Nombre y cocina salen de strings.xml.
+ * Restaurante del mapa. Vienen de Geoapify (OpenStreetMap) cerca del usuario; si no hay clave, red o
+ * resultados, la pantalla usa [RestaurantCatalog] (datos de ejemplo, con nombre y cocina en strings.xml).
  */
 data class Restaurant(
     val id: String,
-    @StringRes val nameRes: Int,
-    @StringRes val cuisineRes: Int,
+    @StringRes val nameRes: Int = 0,
+    @StringRes val cuisineRes: Int = 0,
     val position: LatLon,
-    /** Dato de ejemplo; vendrá de la API. Se usa al recomendar cuando el usuario va en vehículo. */
-    val hasParking: Boolean = false
+    /** Dato de ejemplo; la API gratuita no lo trae. Se usa al recomendar cuando el usuario va en vehículo. */
+    val hasParking: Boolean = false,
+    /** Nombre y tipo de cocina cuando vienen de la API (Geoapify); si son null se usan los strings. */
+    val name: String? = null,
+    val cuisine: String? = null,
+    /** Datos de contacto de OpenStreetMap: pueden faltar, y la pantalla solo muestra los que existen. */
+    val address: String? = null,
+    val phone: String? = null,
+    val website: String? = null,
+    val openingHours: String? = null
 )
+
+fun Restaurant.displayName(context: Context): String = name ?: context.getString(nameRes)
+
+@Composable
+fun Restaurant.displayName(): String = name ?: stringResource(nameRes)
+
+/** Tipo de cocina; cadena vacía si la API no lo trae. */
+@Composable
+fun Restaurant.displayCuisine(): String = cuisine ?: if (cuisineRes != 0) stringResource(cuisineRes) else ""
 
 /** Distancia en metros y rumbo inicial (grados, 0..360 desde el norte verdadero). */
 data class GeoInfo(val meters: Float, val bearing: Float)
