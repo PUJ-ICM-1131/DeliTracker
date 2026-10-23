@@ -17,7 +17,9 @@ import androidx.lifecycle.LifecycleEventObserver
 import com.delitracker.app.R
 import com.delitracker.app.data.Restaurant
 import com.delitracker.app.data.RestaurantCatalog
+import com.delitracker.app.data.displayName
 import com.delitracker.app.route.LatLon
+import com.delitracker.app.share.FriendLocation
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -52,7 +54,8 @@ fun OsmMap(
     focus: Restaurant?,
     recenterTick: Int,
     onRestaurantClick: (Restaurant) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    friends: List<FriendLocation> = emptyList()
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -102,8 +105,8 @@ fun OsmMap(
         val markers = restaurants.map { restaurant ->
             Marker(mapView).apply {
                 position = GeoPoint(restaurant.position.lat, restaurant.position.lon)
-                title = context.getString(restaurant.nameRes)
-                snippet = context.getString(restaurant.cuisineRes)
+                title = restaurant.displayName(context)
+                snippet = restaurant.cuisine ?: if (restaurant.cuisineRes != 0) context.getString(restaurant.cuisineRes) else null
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
                 setOnMarkerClickListener { marker, _ ->
                     marker.showInfoWindow()
@@ -119,6 +122,22 @@ fun OsmMap(
             mapView.overlays.removeAll(markers)
             mapView.overlays.remove(userMarker)
         }
+    }
+
+    // Amigos que comparten su ubicación contigo (se actualizan en tiempo real)
+    DisposableEffect(mapView, friends) {
+        val markers = friends.map { friend ->
+            Marker(mapView).apply {
+                position = GeoPoint(friend.position.lat, friend.position.lon)
+                title = friend.name
+                snippet = context.getString(R.string.share_marker_snippet)
+                icon = ContextCompat.getDrawable(context, android.R.drawable.ic_menu_myplaces)
+                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+            }
+        }
+        mapView.overlays.addAll(markers)
+        mapView.invalidate()
+        onDispose { mapView.overlays.removeAll(markers) }
     }
 
     // Mover el marcador del usuario cuando llega una ubicación nueva

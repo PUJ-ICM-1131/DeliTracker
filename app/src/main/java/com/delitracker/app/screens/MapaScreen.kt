@@ -33,6 +33,9 @@ import com.delitracker.app.R
 import com.delitracker.app.data.GeoInfo
 import com.delitracker.app.data.Restaurant
 import com.delitracker.app.data.RestaurantCatalog
+import com.delitracker.app.data.displayCuisine
+import com.delitracker.app.data.displayName
+import com.delitracker.app.places.GeoapifyPlacesRepository
 import com.delitracker.app.data.recommend
 import com.delitracker.app.components.DtPillRow
 import com.delitracker.app.data.geoFrom
@@ -47,6 +50,7 @@ import com.delitracker.app.sensors.rememberOrientation
 import com.delitracker.app.sensors.rememberTransportMode
 import com.delitracker.app.state.AppViewModel
 import com.delitracker.app.ui.theme.DtTheme
+import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import kotlin.math.abs
 
@@ -65,7 +69,6 @@ import kotlin.math.abs
 fun MapaScreen(vm: AppViewModel, onBuscar: () -> Unit, onFiltros: () -> Unit, onAbrirDetalle: () -> Unit) {
     val colors = DtTheme.colors
     val context = LocalContext.current
-    val restaurants = RestaurantCatalog.all
 
     // --- Permiso de ubicación (se pide al entrar a la pantalla) ---
     var permissionGranted by remember { mutableStateOf(hasLocationPermission(context)) }
@@ -85,6 +88,38 @@ fun MapaScreen(vm: AppViewModel, onBuscar: () -> Unit, onFiltros: () -> Unit, on
     val orientation by rememberOrientation()
     val orientationAvailable = remember { isOrientationAvailable(context) }
     val accelerometerAvailable = remember { hasAccelerometer(context) }
+
+    // --- Restaurantes: Geoapify cerca del usuario; si no hay clave o falla, el catálogo de ejemplo ---
+    var restaurants by remember { mutableStateOf(RestaurantCatalog.all) }
+    var fromApi by remember { mutableStateOf(false) }
+    // Cuadrícula de ~550 m: solo se vuelve a consultar si el usuario se movió de verdad
+    val searchKey = userLocation?.let { Pair((it.lat * 200).roundToInt(), (it.lon * 200).roundToInt()) }
+    LaunchedEffect(searchKey) {
+        val here = userLocation ?: return@LaunchedEffect
+        if (!GeoapifyPlacesRepository.isConfigured) return@LaunchedEffect
+        val found = GeoapifyPlacesRepository.nearbyRestaurants(here)
+        if (!found.isNullOrEmpty()) {
+            restaurants = found
+            fromApi = true
+        } else {
+            restaurants = RestaurantCatalog.all
+            fromApi = false
+        }
+    }
+
+    LaunchedEffect(userLocation) { vm.userLocation = userLocation }
+
+    // Amigos que comparten contigo: se escuchan mientras el mapa está abierto
+    DisposableEffect(Unit) {
+        vm.startWatchingFriends()
+        onDispose { vm.stopWatchingFriends() }
+    }
+    LaunchedEffect(Unit) {
+        while (true) {
+            vm.tickNow()
+            delay(15_000)
+        }
+    }
 
     // Modo de transporte: el detectado por el acelerómetro, salvo que el usuario lo corrija
     var manualMode by remember { mutableStateOf<TransportMode?>(null) }
@@ -125,7 +160,7 @@ fun MapaScreen(vm: AppViewModel, onBuscar: () -> Unit, onFiltros: () -> Unit, on
         if (geo == null || heading == null) null
         else (((geo.bearing - heading) % 360f) + 360f) % 360f
     }
-    val inViewNames = restaurants.filter { isInView(it) }.map { stringResource(it.nameRes) }
+    val inViewNames = restaurants.filter { isInView(it) }.map { it.displayName() }
 
     val modeStill = stringResource(R.string.map_modo_detenido)
     val modeWalking = stringResource(R.string.map_modo_caminando)
@@ -202,7 +237,8 @@ fun MapaScreen(vm: AppViewModel, onBuscar: () -> Unit, onFiltros: () -> Unit, on
                 focus = focus,
                 recenterTick = recenterTick,
                 onRestaurantClick = { targetId = it.id },
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
+                friends = vm.friendLocations
             )
 
             FilledTonalIconButton(
@@ -224,9 +260,9 @@ fun MapaScreen(vm: AppViewModel, onBuscar: () -> Unit, onFiltros: () -> Unit, on
                 val pickedGeo = userLocation?.let { picked.geoFrom(it) }
                 ToastCard(
                     title = stringResource(R.string.map_sugerencia_titulo),
-                    body = stringResource(picked.nameRes) +
+                    body = picked.displayName() +
                         (pickedGeo?.let { " · " + formatDistance(it.meters) } ?: ""),
-                    onClick = onAbrirDetalle,
+                    onClick = { vm.selectRestaurant(picked); onAbrirDetalle() },
                     modifier = Modifier.align(Alignment.TopCenter)
                 )
             }
@@ -240,7 +276,10 @@ fun MapaScreen(vm: AppViewModel, onBuscar: () -> Unit, onFiltros: () -> Unit, on
                 ToastCard(
                     title = stringResource(R.string.delitracker),
                     body = stringResource(R.string.verde_bowl_est_a_80_m_y_coincide_con_tus_gustos_veganos),
-                    onClick = onAbrirDetalle,
+                    onClick = {
+                        vm.selectCatalogRestaurant("verde_bowl")
+                        onAbrirDetalle()
+                    },
                     modifier = Modifier.align(Alignment.TopCenter)
                 )
             }
@@ -248,7 +287,7 @@ fun MapaScreen(vm: AppViewModel, onBuscar: () -> Unit, onFiltros: () -> Unit, on
 
         Spacer(Modifier.height(10.dp))
         CompassCard(
-            targetName = stringResource(target.nameRes),
+            targetName = target.displayName(),
             distanceText = targetGeo?.let { formatDistance(it.meters) },
             arrowRotation = arrowRotation,
             orientationAvailable = orientationAvailable,
@@ -260,7 +299,7 @@ fun MapaScreen(vm: AppViewModel, onBuscar: () -> Unit, onFiltros: () -> Unit, on
                 select(next)
                 suggestion = next
             },
-            onDetalle = onAbrirDetalle
+            onDetalle = { vm.selectRestaurant(target); onAbrirDetalle() }
         )
 
         // Modo de transporte (acelerómetro) con corrección manual
@@ -296,12 +335,34 @@ fun MapaScreen(vm: AppViewModel, onBuscar: () -> Unit, onFiltros: () -> Unit, on
             Text(stringResource(R.string.map_sin_sensores), fontSize = 10.sp, color = colors.textMuted)
         }
 
-        Spacer(Modifier.height(10.dp))
+        if (vm.isSharing) {
+            Spacer(Modifier.height(6.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    stringResource(R.string.share_banner),
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.weight(1f)
+                )
+                TextButton(
+                    onClick = { vm.stopSharing() },
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                ) { Text(stringResource(R.string.detener), fontSize = 11.sp) }
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            stringResource(if (fromApi) R.string.map_fuente_geoapify else R.string.map_fuente_ejemplo),
+            fontSize = 10.sp,
+            color = colors.textMuted
+        )
+        Spacer(Modifier.height(4.dp))
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(ordered, key = { it.id }) { restaurant ->
-                val cuisine = stringResource(restaurant.cuisineRes)
+                val cuisine = restaurant.displayCuisine()
                 val meta = userLocation?.let {
-                    stringResource(R.string.map_meta_cocina_distancia, cuisine, formatDistance(restaurant.geoFrom(it).meters))
+                    if (cuisine.isBlank()) formatDistance(restaurant.geoFrom(it).meters)
+                    else stringResource(R.string.map_meta_cocina_distancia, cuisine, formatDistance(restaurant.geoFrom(it).meters))
                 } ?: cuisine
                 val selected = restaurant.id == target.id
                 val inView = isInView(restaurant)
@@ -317,7 +378,7 @@ fun MapaScreen(vm: AppViewModel, onBuscar: () -> Unit, onFiltros: () -> Unit, on
                         .clickable { select(restaurant) }
                         .padding(8.dp)
                 ) {
-                    Text(stringResource(restaurant.nameRes), fontWeight = FontWeight.SemiBold, fontSize = 11.5.sp)
+                    Text(restaurant.displayName(), fontWeight = FontWeight.SemiBold, fontSize = 11.5.sp)
                     Text(meta, fontSize = 10.sp, color = colors.textMuted)
                     if (mode == TransportMode.VEHICLE && restaurant.hasParking) {
                         Text(stringResource(R.string.map_con_parqueadero), fontSize = 10.sp, color = colors.accentSoftInk)

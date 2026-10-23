@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="map_fuente_geoapify">Lugares cercanos: Geoapify · © colaboradores de OpenStreetMap</string>
+    <string name="map_fuente_ejemplo">Lugares de ejemplo (sin conexión a Geoapify)</string>
+</resources>

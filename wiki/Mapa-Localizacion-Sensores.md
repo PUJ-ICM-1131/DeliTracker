@@ -48,5 +48,5 @@ Pantalla: **Mapa** (`screens/MapaScreen.kt`). Cubre las historias **#3** (mapa c
 4. El botón **Sugerir** pasa al siguiente restaurante recomendado.
 
 ## Notas
-- Las coordenadas y el dato "tiene parqueadero" son de ejemplo; vendrán de la API (Foursquare Places).
+- Las coordenadas y el dato "tiene parqueadero" son de ejemplo; vendrán de la API (Geoapify).
 - Los textos están en `res/values/strings_mapa.xml`.
