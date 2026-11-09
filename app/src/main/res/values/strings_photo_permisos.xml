@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="photo_camera_denied_title">Permiso de cámara</string>
+    <string name="photo_camera_retry_msg">Necesitamos acceder a la cámara para tomar la foto. ¿Quieres intentarlo de nuevo?</string>
+    <string name="photo_camera_settings_msg">El permiso de cámara está bloqueado. Actívalo en los ajustes de la app para poder tomar fotos.</string>
+    <string name="photo_open_settings">Abrir ajustes</string>
+    <string name="photo_retry">Reintentar</string>
+</resources>
