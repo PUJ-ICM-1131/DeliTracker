@@ -129,7 +129,7 @@ fun DeliTrackerApp() {
                 )
             }
             composable(Routes.BUSCAR) {
-                BuscarScreen(onAbrirDetalle = { vm.selectCatalogRestaurant("sushi_ten"); goTo(Routes.DETALLE) })
+                BuscarScreen(vm = vm, onAbrirDetalle = { goTo(Routes.DETALLE) })
             }
             composable(Routes.FILTROS) {
                 FiltrosScreen(vm = vm, onAplicar = { goBack() })

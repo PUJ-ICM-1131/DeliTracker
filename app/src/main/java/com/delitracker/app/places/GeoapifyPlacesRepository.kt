@@ -12,6 +12,7 @@ import org.json.JSONObject
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
+import java.net.URLEncoder
 
 /**
  * Restaurantes cercanos desde la Places API de Geoapify (datos de OpenStreetMap).
@@ -36,6 +37,12 @@ object GeoapifyPlacesRepository {
 
     private var cached: Cached? = null
 
+    private const val SEARCH_RADIUS_METERS = 15_000
+    private const val SEARCH_LIMIT = 15
+    private const val SEARCH_CACHE_MAX_AGE_MS = 5 * 60 * 1000L
+    private class CachedSearch(val savedAt: Long, val places: List<Restaurant>)
+    private val searchCache = HashMap<String, CachedSearch>()
+
     val isConfigured: Boolean get() = BuildConfig.GEOAPIFY_API_KEY.isNotBlank()
 
     suspend fun nearbyRestaurants(center: LatLon, radiusMeters: Int = DEFAULT_RADIUS_METERS): List<Restaurant>? {
@@ -54,12 +61,43 @@ object GeoapifyPlacesRepository {
         return places
     }
 
-    private fun fetch(center: LatLon, radiusMeters: Int): List<Restaurant>? {
+    /**
+     * Busca restaurantes y cafés por nombre o palabra clave cerca de [center] (radio de 15 km).
+     * Caché de 5 minutos por texto buscado para no gastar créditos al repetir la búsqueda.
+     * Devuelve null si no hay clave o falla la red (la pantalla busca entonces en el catálogo de ejemplo).
+     */
+    suspend fun searchByName(text: String, center: LatLon): List<Restaurant>? {
+        val clean = text.trim()
+        if (!isConfigured || clean.length < 2) return null
+        // La clave de caché incluye la cuadrícula de ~1 km para no mezclar ciudades
+        val key = "${clean.lowercase()}|${(center.lat * 100).toInt()}|${(center.lon * 100).toInt()}"
+        synchronized(this) {
+            val hit = searchCache[key]
+            if (hit != null && System.currentTimeMillis() - hit.savedAt < SEARCH_CACHE_MAX_AGE_MS) return hit.places
+        }
+        val places = withContext(Dispatchers.IO) {
+            fetch(center, SEARCH_RADIUS_METERS, name = clean, limit = SEARCH_LIMIT, categories = "catering")
+        } ?: return null
+        synchronized(this) {
+            if (searchCache.size > 30) searchCache.clear()
+            searchCache[key] = CachedSearch(System.currentTimeMillis(), places)
+        }
+        return places
+    }
+
+    private fun fetch(
+        center: LatLon,
+        radiusMeters: Int,
+        name: String? = null,
+        limit: Int = LIMIT,
+        categories: String = "catering.restaurant"
+    ): List<Restaurant>? {
         // Geoapify usa el orden lon,lat en filter y bias
-        val query = "categories=catering.restaurant" +
+        val nameParam = name?.let { "&name=" + URLEncoder.encode(it, "UTF-8") }.orEmpty()
+        val query = "categories=$categories" + nameParam +
             "&filter=circle:${center.lon},${center.lat},$radiusMeters" +
             "&bias=proximity:${center.lon},${center.lat}" +
-            "&limit=$LIMIT&lang=es&apiKey=${BuildConfig.GEOAPIFY_API_KEY}"
+            "&limit=$limit&lang=es&apiKey=${BuildConfig.GEOAPIFY_API_KEY}"
         val connection = URL("$ENDPOINT?$query").openConnection() as HttpURLConnection
         return try {
             connection.connectTimeout = 10_000
