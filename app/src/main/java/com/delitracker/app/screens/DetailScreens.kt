@@ -457,7 +457,6 @@ fun ResenaScreen(vm: AppViewModel, onPublicar: () -> Unit) {
     }
 }
 
-// Historia #6 · AR Explorer con la cámara + escaneo de menú por QR
 @Composable
 fun ArScreen(onCerrar: () -> Unit) {
     val context = LocalContext.current
@@ -606,6 +605,7 @@ fun ArScreen(onCerrar: () -> Unit) {
                     .padding(16.dp),
                 shape = RoundedCornerShape(8.dp),
                 color = Color.White.copy(alpha = 0.92f)
+
             ) {
                 Text(
                     stringResource(R.string.ensalada_cesar_320_kcal),
@@ -613,6 +613,7 @@ fun ArScreen(onCerrar: () -> Unit) {
                     color = Color.Black,
                     modifier = Modifier.padding(6.dp)
                 )
+                Text(stringResource(R.string.ensalada_cesar_320_kcal), fontSize = 10.sp, modifier = Modifier.padding(6.dp))
             }
             Surface(
                 modifier = Modifier
