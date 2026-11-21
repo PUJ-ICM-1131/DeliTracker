@@ -613,7 +613,6 @@ fun ArScreen(onCerrar: () -> Unit) {
                     color = Color.Black,
                     modifier = Modifier.padding(6.dp)
                 )
-                Text(stringResource(R.string.ensalada_cesar_320_kcal), fontSize = 10.sp, modifier = Modifier.padding(6.dp))
             }
             Surface(
                 modifier = Modifier
