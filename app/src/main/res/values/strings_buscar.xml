@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="buscar_borrar_texto">Borrar texto</string>
+    <string name="buscar_cargando">Buscando…</string>
+    <string name="buscar_minimo">Escribe al menos 2 letras para buscar.</string>
+    <string name="buscar_sin_resultados">No encontramos resultados para “%1$s”. Prueba con otro nombre o tipo de comida.</string>
+    <string name="buscar_sin_red">No pudimos conectar con el servicio de restaurantes. Mostramos solo los restaurantes de ejemplo.</string>
+    <string name="buscar_sin_clave">La búsqueda en línea no está configurada. Mostramos solo los restaurantes de ejemplo.</string>
+    <string name="buscar_borrar_recientes">Borrar historial</string>
+    <string name="buscar_resultados_cantidad">%1$d resultados</string>
+</resources>

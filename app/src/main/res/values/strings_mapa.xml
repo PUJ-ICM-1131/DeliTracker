@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Textos de la pantalla de mapa, localización y sensores (en archivo aparte para evitar conflictos al fusionar strings.xml) -->
+<resources>
+    <string name="map_cocina_cafe">Café</string>
+    <string name="map_mi_ubicacion">Tu ubicación</string>
+    <string name="map_centrar">Centrar en mi ubicación</string>
+    <string name="map_permiso_mensaje">Activa tu ubicación para ver qué restaurantes tienes cerca.</string>
+    <string name="map_permitir">Permitir</string>
+    <string name="map_sugerencia_titulo">¡Te sugerimos este lugar!</string>
+    <string name="map_brujula_hacia">Hacia %1$s</string>
+    <string name="map_brujula_no_disponible">Brújula no disponible en este dispositivo</string>
+    <string name="map_brujula_esperando">Esperando tu ubicación…</string>
+    <string name="map_sugerir">Sugerir</string>
+    <string name="map_ver_detalle">Ver detalle</string>
+    <string name="map_meta_cocina_distancia">%1$s · %2$s</string>
+    <string name="map_dist_m">%1$d m</string>
+    <string name="map_dist_km">%1$.1f km</string>
+    <string name="map_modo_detenido">Detenido</string>
+    <string name="map_modo_caminando">Caminando</string>
+    <string name="map_modo_vehiculo">En vehículo</string>
+    <string name="map_modo_auto">Automático</string>
+    <string name="map_modo_linea_auto">Modo: %1$s (detectado)</string>
+    <string name="map_modo_linea_manual">Modo: %1$s (elegido por ti)</string>
+    <string name="map_con_parqueadero">Con parqueadero</string>
+    <string name="map_al_frente">Al frente</string>
+    <string name="map_en_vista">En tu campo de visión: %1$s</string>
+    <string name="map_en_vista_ninguno">Ninguno en tu campo de visión</string>
+    <string name="map_calibrar">Lectura inestable: mueve el celular dibujando un 8 para calibrar.</string>
+    <string name="map_sin_sensores">Sensores no disponibles en este dispositivo</string>
+</resources>

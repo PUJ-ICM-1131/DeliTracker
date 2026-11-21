@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Compartir ubicación (historia 8) e invitar desde contactos (historia 9) -->
+<resources>
+    <string name="share_aun_sin_amigos">Aún no tienes amigos en tu lista. Agrégalos con su correo o desde tus contactos.</string>
+    <string name="share_correo_amigo">Correo del amigo</string>
+    <string name="share_agregar">Agregar</string>
+    <string name="share_empezar">Compartir mi ubicación</string>
+    <string name="share_activo_hasta">Compartiendo hasta las %1$s</string>
+    <string name="share_amigos_contigo">Amigos que comparten contigo</string>
+    <string name="share_nadie">Nadie está compartiendo su ubicación contigo ahora.</string>
+    <string name="share_hace_seg">hace %1$d s</string>
+    <string name="share_hace_min">hace %1$d min</string>
+    <string name="share_marker_snippet">Compartiendo su ubicación</string>
+    <string name="share_banner">Compartiendo tu ubicación con tus amigos</string>
+
+    <string name="share_err_no_disponible">Compartir ubicación no está disponible con el Firebase local; usa la versión conectada a la nube.</string>
+    <string name="share_err_sin_sesion">Inicia sesión para compartir tu ubicación.</string>
+    <string name="share_err_sin_amigos">Activa al menos un amigo para compartir tu ubicación.</string>
+    <string name="share_err_permiso">Concede el permiso de ubicación para compartirla.</string>
+    <string name="share_err_red">No se pudo compartir. Revisa tu conexión y que Firestore esté activado en el proyecto de Firebase.</string>
+    <string name="share_err_correo">Escribe un correo válido.</string>
+    <string name="share_err_propio">Ese es tu propio correo.</string>
+    <string name="share_err_repetido">Ese amigo ya está en tu lista.</string>
+
+    <string name="share_invitar_sms">Elegir contacto e invitar por SMS</string>
+    <string name="share_agregar_contacto">Agregar amigo desde mis contactos</string>
+    <string name="share_tus_amigos">Tus amigos</string>
+    <string name="share_quitar">Quitar</string>
+    <string name="share_contacto_sin_correo">Ese contacto no tiene correo. Elige otro o escríbelo a mano.</string>
+    <string name="share_sin_app_sms">No hay una app de mensajes disponible.</string>
+    <string name="share_sin_app_contactos">No se encontró la app de contactos.</string>
+    <string name="share_sms_texto">Hola, usa DeliTracker para descubrir restaurantes y compartir ubicación conmigo. Crea tu cuenta y agrégame con este correo: %1$s</string>
+</resources>

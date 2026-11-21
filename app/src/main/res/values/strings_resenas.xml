@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Reseñas en Firebase y datos del restaurante en Detalle -->
+<resources>
+    <string name="review_titulo">Reseñas</string>
+    <string name="review_promedio">%1$.1f (%2$d)</string>
+    <string name="review_cargando">Cargando reseñas…</string>
+    <string name="review_sin_resenas">Aún no hay reseñas. Sé la primera persona en escribir una.</string>
+    <string name="review_publicando">Publicando…</string>
+    <string name="review_sin_app">No hay una app que pueda abrir esto.</string>
+    <string name="review_err_cargar">No se pudieron cargar las reseñas. Revisa tu conexión y que Firestore esté activado.</string>
+    <string name="review_err_publicar">No se pudo publicar la reseña. Revisa tu conexión y que Firestore esté activado.</string>
+    <string name="review_err_no_disponible">Las reseñas no están disponibles con el Firebase local; usa la versión conectada a la nube.</string>
+    <string name="review_err_sin_sesion">Inicia sesión para publicar una reseña.</string>
+</resources>
