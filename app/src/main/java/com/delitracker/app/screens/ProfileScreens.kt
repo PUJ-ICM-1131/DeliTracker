@@ -154,6 +154,7 @@ fun EditarPerfilScreen(vm: AppViewModel, onGuardar: () -> Unit) {
 // Hub hacia privacidad, Premium y sensores
 @Composable
 fun AjustesScreen(
+    onNotificaciones: () -> Unit,
     onPremium: () -> Unit,
     onContexto: () -> Unit,
     onCerrarSesion: () -> Unit,
@@ -178,7 +179,7 @@ fun AjustesScreen(
             }
             Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = DtTheme.colors.textMuted)
         }
-        DtRow {
+        DtRow(onClick = onNotificaciones) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Filled.Notifications, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(9.dp))

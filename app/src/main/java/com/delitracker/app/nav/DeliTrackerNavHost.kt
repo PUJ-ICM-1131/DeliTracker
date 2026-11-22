@@ -31,7 +31,10 @@ import com.delitracker.app.state.AppViewModel
  *               para que el botón atrás desde un tab no la revele)
  */
 @Composable
-fun DeliTrackerApp() {
+fun DeliTrackerApp(
+    notificationTarget: com.delitracker.app.notifications.NotificationTarget? = null,
+    onNotificationHandled: () -> Unit = {}
+) {
     val navController = rememberNavController()
     val vm: AppViewModel = viewModel()
     if (!vm.isReady) {
@@ -79,6 +82,23 @@ fun DeliTrackerApp() {
                 launchSingleTop = true
             }
         }
+    }
+
+    androidx.compose.runtime.DisposableEffect(vm.isLoggedIn, vm.userEmail) {
+        if (vm.isLoggedIn) vm.startWatchingFriends()
+        onDispose { vm.stopWatchingFriends() }
+    }
+    androidx.compose.runtime.LaunchedEffect(notificationTarget, vm.isLoggedIn) {
+        val target = notificationTarget ?: return@LaunchedEffect
+        if (!vm.isLoggedIn) return@LaunchedEffect
+        if (target.account.equals(vm.userEmail, ignoreCase = true)) {
+            target.restaurant?.let { vm.selectRestaurant(it) }
+            navController.navigate(if (target.restaurant == null) Routes.MAPA else Routes.DETALLE) {
+                popUpTo(navController.graph.findStartDestination().id)
+                launchSingleTop = true
+            }
+        }
+        onNotificationHandled()
     }
 
     Scaffold(
@@ -183,6 +203,7 @@ fun DeliTrackerApp() {
             }
             composable(Routes.AJUSTES) {
                 AjustesScreen(
+                    onNotificaciones = { goTo(Routes.NOTIFICACIONES) },
                     onPremium = { goTo(Routes.PREMIUM) },
                     onContexto = { goTo(Routes.CONTEXTO) },
                     onCerrarSesion = {
@@ -190,6 +211,9 @@ fun DeliTrackerApp() {
                     },
                     onEliminarCuenta = { goTo(Routes.LOGOUT) }
                 )
+            }
+            composable(Routes.NOTIFICACIONES) {
+                com.delitracker.app.notifications.NotificationSettingsScreen(vm.userEmail)
             }
             composable(Routes.PREMIUM) {
                 PremiumScreen(onSuscribirse = { goBack() })

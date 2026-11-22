@@ -20,6 +20,7 @@ object Routes {
     const val INVITAR = "invitar"
     const val PERFIL = "perfil"
     const val EDITAR_PERFIL = "editarPerfil"
+    const val NOTIFICACIONES = "notificaciones"
     const val AJUSTES = "ajustes"
     const val PREMIUM = "premium"
     const val CONTEXTO = "contexto"
@@ -53,6 +54,7 @@ fun topBarTitleFor(route: String): String = when (route) {
     Routes.DETALLE -> stringResource(R.string.titulo_detalle)
     Routes.RESENA -> stringResource(R.string.rese_a)
     Routes.EDITAR_PERFIL -> stringResource(R.string.titulo_editar_perfil)
+    Routes.NOTIFICACIONES -> stringResource(R.string.notificaciones)
     Routes.AJUSTES -> stringResource(R.string.ajustes_de_cuenta)
     Routes.PREMIUM -> stringResource(R.string.titulo_premium)
     Routes.CONTEXTO -> stringResource(R.string.titulo_contexto)
