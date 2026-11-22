@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Base64
 import com.delitracker.app.state.FirestoreProvider
+import com.delitracker.app.userdata.UserDataRepository
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
@@ -71,6 +72,8 @@ internal object ReviewRepository {
         )
         if (photo != null) data["photo"] = photo
         db.collection(RESTAURANTS).document(restaurantId).collection(REVIEWS).document(uid).set(data).await()
+        // Se recuerda dónde reseñó para poder borrarlo si elimina la cuenta; si falla, la reseña igual quedó publicada
+        try { UserDataRepository.addReviewedRestaurant(context, restaurantId) } catch (e: Exception) { }
     }
 
     /** JPEG de máx. 800 px y calidad 70 en Base64; null si el archivo no existe o no se puede leer. */

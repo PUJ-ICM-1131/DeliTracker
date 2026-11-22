@@ -10,6 +10,12 @@ service cloud.firestore {
         && (request.auth.uid == uid || request.auth.token.email in resource.data.allowed);
     }
 
+    // Datos propios del usuario: users/{uid} (favoritos, preferencias y restaurantes reseñados).
+    // Solo su dueño los lee, los escribe y los borra.
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
     // Reseñas de restaurantes: restaurants/{id}/reviews/{uid del autor}
     // - Leen todas las personas con sesión.
     // - Cada persona escribe solo su propia reseña (una por restaurante), con 1 a 5 estrellas,

@@ -59,6 +59,9 @@ fun FavoritosScreen(vm: AppViewModel, onAbrirDetalle: () -> Unit) {
         .padding(16.dp)) {
         Text(stringResource(R.string.favoritos), fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(8.dp))
+        if (vm.favs.isEmpty()) {
+            Text(stringResource(R.string.favoritos_vacio), fontSize = 12.sp, color = DtTheme.colors.textMuted)
+        }
         vm.favs.forEach { name ->
             DtRow(onClick = { vm.openFavorite(name); onAbrirDetalle() }) {
                 Row(verticalAlignment = Alignment.CenterVertically) {

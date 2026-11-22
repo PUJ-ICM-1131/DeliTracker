@@ -205,7 +205,7 @@ fun OnboardingScreen(vm: AppViewModel, onContinuar: () -> Unit, onOmitir: () -> 
             onSelect = { vm.price = it }
         )
         Spacer(Modifier.weight(1f))
-        Button(onClick = onContinuar, modifier = Modifier
+        Button(onClick = { vm.savePreferences(); onContinuar() }, modifier = Modifier
             .fillMaxWidth()
             .height(46.dp)) {
             Text(stringResource(R.string.continuar))
