@@ -28,6 +28,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.filled.Close
+import com.delitracker.app.location.rememberUserLocation
+import com.delitracker.app.map.OsmMap
 import com.delitracker.app.route.hasLocationPermission
 import com.delitracker.app.share.Friend
 import kotlinx.coroutines.delay
@@ -93,8 +95,14 @@ fun CompartirScreen(vm: AppViewModel, onInvitar: () -> Unit, onDetener: () -> Un
         }
     }
 
+    // Mi ubicación en el mapa de esta pantalla (se activa cuando hay permiso)
+    var hasPermission by remember { mutableStateOf(hasLocationPermission(context)) }
+    val located by rememberUserLocation(enabled = hasPermission)
+    val me = located ?: vm.userLocation
+
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
-        if (hasLocationPermission(context)) vm.startSharing() else vm.shareMessage = R.string.share_err_permiso
+        hasPermission = hasLocationPermission(context)
+        if (hasPermission) vm.startSharing() else vm.shareMessage = R.string.share_err_permiso
     }
     fun startWithPermission() {
         if (hasLocationPermission(context)) vm.startSharing()
@@ -104,6 +112,33 @@ fun CompartirScreen(vm: AppViewModel, onInvitar: () -> Unit, onDetener: () -> Un
     Column(modifier = Modifier
         .fillMaxSize()
         .padding(16.dp)) {
+        // Mapa en tiempo real: yo y los amigos que están compartiendo conmigo, con su recorrido
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(230.dp)
+                .clip(RoundedCornerShape(12.dp))
+        ) {
+            OsmMap(
+                restaurants = emptyList(),
+                userLocation = me,
+                focus = null,
+                recenterTick = 0,
+                onRestaurantClick = {},
+                modifier = Modifier.fillMaxSize(),
+                friends = vm.friendLocations,
+                friendTracks = vm.friendTracks,
+                myTrack = vm.myTrack,
+                myPhotoPath = vm.userPhotoPath,
+                myName = vm.userName
+            )
+        }
+        Text(
+            stringResource(R.string.share_mapa_atribucion),
+            fontSize = 10.sp,
+            color = DtTheme.colors.textMuted,
+            modifier = Modifier.padding(top = 2.dp, bottom = 6.dp)
+        )
         Column(modifier = Modifier
             .weight(1f)
             .verticalScroll(rememberScrollState())) {

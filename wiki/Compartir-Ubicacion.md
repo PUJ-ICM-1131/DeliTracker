@@ -29,3 +29,10 @@ La ubicación se lee cada 5 s o 5 m (`LocationSharer`) y se publica como máximo
 - No funciona con el emulador local de Firebase (`-PFIREBASE_AUTH_EMULATOR=true`): solo se inicia el de Authentication.
 - Los amigos deben tener cuenta con ese mismo correo. Quien te agregó no recibe aviso: ve tu ubicación mientras compartas.
 - Cambiar el correo de la cuenta cambia quién ve tu ubicación; los amigos lo agregan con el nuevo.
+
+## Mapa en la pantalla de compartir (como el Taller 3)
+La pantalla *Compartir ubicación* tiene un mapa arriba con tu posición y la de los amigos que **están compartiendo contigo**,
+en tiempo real. Cada uno aparece con su **foto de perfil** en un marcador circular (o su inicial si no tiene foto) y con la
+**línea de su recorrido** (naranja la tuya, azul la de los amigos). Al dejar de compartir, el marcador y la línea desaparecen.
+La foto viaja como una miniatura de 96 px en Base64 dentro de `shares/{uid}.photo` (~5 KB); no hace falta cambiar las reglas.
+El recorrido se arma en el dispositivo con las posiciones que van llegando (máximo 2.000 puntos).

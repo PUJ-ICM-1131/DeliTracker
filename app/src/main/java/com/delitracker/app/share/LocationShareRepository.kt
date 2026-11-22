@@ -33,7 +33,7 @@ internal object LocationShareRepository {
     /** Empieza (o reinicia) la sesión de compartir. Lanza una excepción si no hay sesión o falla la red. */
     suspend fun start(
         context: Context, name: String, email: String,
-        allowed: List<String>, expiresAtMs: Long, position: LatLon?
+        allowed: List<String>, expiresAtMs: Long, position: LatLon?, photo: String? = null
     ) {
         val db = firestore(context) ?: error("Firestore no disponible")
         val uid = uid(context) ?: error("Sin sesión")
@@ -45,7 +45,8 @@ internal object LocationShareRepository {
             "updatedAtMs" to System.currentTimeMillis(),
             "lat" to position?.lat,
             "lon" to position?.lon,
-            "allowed" to lowercased(allowed)
+            "allowed" to lowercased(allowed),
+            "photo" to photo
         )
         db.collection(COLLECTION).document(uid).set(data).await()
     }
@@ -103,7 +104,8 @@ internal object LocationShareRepository {
                         email = doc.getString("ownerEmail").orEmpty(),
                         position = LatLon(lat, lon),
                         updatedAtMs = doc.getLong("updatedAtMs") ?: 0L,
-                        expiresAtMs = doc.getLong("expiresAtMs") ?: 0L
+                        expiresAtMs = doc.getLong("expiresAtMs") ?: 0L,
+                        photo = doc.getString("photo")
                     )
                 }
                 onChange(list)

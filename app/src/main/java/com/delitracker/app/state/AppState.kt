@@ -22,12 +22,16 @@ import com.delitracker.app.share.FriendLocation
 import com.delitracker.app.share.FriendStore
 import com.delitracker.app.share.LocationShareRepository
 import com.delitracker.app.share.LocationSharer
+import com.delitracker.app.share.PhotoThumbnail
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.delitracker.app.storage.ImageStorage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+
+/** Máximo de puntos que se guardan por recorrido (evita que la lista crezca sin límite). */
+private const val MAX_TRACK_POINTS = 2000
 
 /** Estado de interfaz y sesión validada por Firebase Authentication. */
 class AppViewModel(application: Application) : AndroidViewModel(application) {
@@ -73,6 +77,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     /** Texto de error/aviso (R.string) para las pantallas de compartir. */
     var shareMessage by mutableStateOf<Int?>(null)
     private var rawFriendLocations by mutableStateOf<List<FriendLocation>>(emptyList())
+    /** Recorrido propio mientras se comparte la ubicación; se borra al detener. */
+    var myTrack by mutableStateOf<List<LatLon>>(emptyList())
+        private set
+    /** Recorrido de cada amigo que comparte contigo (por uid); se borra cuando deja de compartir. */
+    var friendTracks by mutableStateOf<Map<String, List<LatLon>>>(emptyMap())
+        private set
     var nowMs by mutableStateOf(System.currentTimeMillis())
         private set
     private var expiryJob: Job? = null
@@ -405,7 +415,21 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /** Actualiza "ahora" (para ocultar ubicaciones viejas). Las pantallas lo llaman cada ~15 s. */
-    fun tickNow() { nowMs = System.currentTimeMillis() }
+    fun tickNow() {
+        nowMs = System.currentTimeMillis()
+        updateFriendTracks()
+    }
+
+    /** Suma la posición nueva de cada amigo a su recorrido; quien dejó de compartir pierde su línea. */
+    private fun updateFriendTracks() {
+        val tracks = HashMap<String, List<LatLon>>()
+        for (friend in friendLocations) {
+            val previous = friendTracks[friend.uid].orEmpty()
+            tracks[friend.uid] = if (previous.lastOrNull() == friend.position) previous
+            else (previous + friend.position).takeLast(MAX_TRACK_POINTS)
+        }
+        friendTracks = tracks
+    }
 
     /** Cada pantalla que muestra amigos lo llama al entrar y [stopWatchingFriends] al salir. */
     fun startWatchingFriends() {
@@ -467,8 +491,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val expiresAt = System.currentTimeMillis() + durationMs
         val app = getApplication<Application>()
         viewModelScope.launch {
+            val photo = withContext(Dispatchers.IO) { userPhotoPath?.let { PhotoThumbnail.base64(it) } }
             try {
-                LocationShareRepository.start(app, userName, userEmail, enabledEmails(), expiresAt, userLocation)
+                LocationShareRepository.start(app, userName, userEmail, enabledEmails(), expiresAt, userLocation, photo)
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -476,8 +501,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 startingShare = false
                 return@launch
             }
+            myTrack = listOfNotNull(userLocation)
             val started = sharer.start { position ->
                 userLocation = position
+                if (myTrack.lastOrNull() != position) myTrack = (myTrack + position).takeLast(MAX_TRACK_POINTS)
                 val now = System.currentTimeMillis()
                 if (now - lastPublishMs >= 3000L) {
                     lastPublishMs = now
@@ -512,6 +539,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val wasSharing = isSharing
         isSharing = false
         shareExpiresAtMs = 0L
+        myTrack = emptyList()
         if (wasSharing) {
             try { LocationShareRepository.stop(getApplication()) } catch (e: Exception) { /* expira solo por expiresAtMs */ }
         }
@@ -525,6 +553,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         watchingEmail = null
         watchers = 0
         rawFriendLocations = emptyList()
+        friendTracks = emptyMap()
+        myTrack = emptyList()
         friends.clear()
         shareMessage = null
     }
