@@ -108,6 +108,9 @@ fun MapaScreen(vm: AppViewModel, onBuscar: () -> Unit, onFiltros: () -> Unit, on
     }
 
     LaunchedEffect(userLocation) { vm.userLocation = userLocation }
+    LaunchedEffect(userLocation, restaurants, vm.cuisine.toMap()) {
+        userLocation?.let { vm.notifyNearby(restaurants, it) }
+    }
 
     // Amigos que comparten contigo: se escuchan mientras el mapa está abierto
     DisposableEffect(Unit) {
@@ -196,9 +199,7 @@ fun MapaScreen(vm: AppViewModel, onBuscar: () -> Unit, onFiltros: () -> Unit, on
             OutlinedButton(onClick = onFiltros, modifier = Modifier.weight(1f)) {
                 Text(stringResource(R.string.filtros))
             }
-            OutlinedButton(onClick = { vm.triggerAlertToast() }, modifier = Modifier.weight(1f)) {
-                Text(stringResource(R.string.simular_alerta))
-            }
+
         }
 
         if (!permissionGranted) {
@@ -267,22 +268,7 @@ fun MapaScreen(vm: AppViewModel, onBuscar: () -> Unit, onFiltros: () -> Unit, on
                 )
             }
 
-            // Alerta simulada (historia de notificaciones geolocalizadas)
-            if (vm.showAlertToast) {
-                LaunchedEffect(Unit) {
-                    delay(4000)
-                    vm.dismissAlertToast()
-                }
-                ToastCard(
-                    title = stringResource(R.string.delitracker),
-                    body = stringResource(R.string.verde_bowl_est_a_80_m_y_coincide_con_tus_gustos_veganos),
-                    onClick = {
-                        vm.selectCatalogRestaurant("verde_bowl")
-                        onAbrirDetalle()
-                    },
-                    modifier = Modifier.align(Alignment.TopCenter)
-                )
-            }
+
         }
 
         Spacer(Modifier.height(10.dp))

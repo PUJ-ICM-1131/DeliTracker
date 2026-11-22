@@ -32,6 +32,8 @@ import kotlinx.coroutines.withContext
 /** Estado de interfaz y sesión validada por Firebase Authentication. */
 class AppViewModel(application: Application) : AndroidViewModel(application) {
 
+    private val notifications = com.delitracker.app.notifications.DeliNotifications(application)
+
     private val profileRepository = UserProfileRepository(application)
 
     // Filtros / onboarding (las claves salen de strings.xml para no duplicar
@@ -76,6 +78,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private var expiryJob: Job? = null
     private var watchers = 0
     private var stopWatching: (() -> Unit)? = null
+    private var watchingEmail: String? = null
     private var lastPublishMs = 0L
     private var startingShare = false
 
@@ -99,9 +102,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         application.getString(R.string.sushi_ten_),
         application.getString(R.string.cafe_andino)
     )
-
-    // Alerta simulada en el mapa (historia de notificaciones geolocalizadas)
-    var showAlertToast by mutableStateOf(false)
 
     // Perfil (se sobrescribe con lo guardado en el dispositivo, si existe)
     var userName by mutableStateOf("")
@@ -175,7 +175,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             try { action(); onResult(true, null) }
             catch (e: kotlinx.coroutines.CancellationException) { throw e }
             catch (e: Exception) {
-                if (e is AuthFailure && e.status == 401) isLoggedIn = false
+                if (e is AuthFailure && e.status == 401) {
+                    isLoggedIn = false
+                    notifications.clear()
+                }
                 authMessage = errorFor(e)
                 onResult(false, authMessage)
             } finally { authBusy = false }
@@ -405,12 +408,22 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     /** Cada pantalla que muestra amigos lo llama al entrar y [stopWatchingFriends] al salir. */
     fun startWatchingFriends() {
         watchers++
-        if (watchers != 1 || !isLoggedIn || !LocationShareRepository.isAvailable) return
+        if (!isLoggedIn || !LocationShareRepository.isAvailable) return
+        if (stopWatching != null && watchingEmail == userEmail) return
+        stopWatching?.invoke()
+        rawFriendLocations = emptyList()
+        val observedEmail = userEmail
+        watchingEmail = observedEmail
         stopWatching = LocationShareRepository.observeFriends(
             context = getApplication(),
-            myEmail = userEmail,
-            onChange = { rawFriendLocations = it; tickNow() },
-            onError = { rawFriendLocations = emptyList() }
+            myEmail = observedEmail,
+            onChange = {
+                if (isLoggedIn && userEmail == observedEmail) {
+                    rawFriendLocations = it; tickNow()
+                    notifications.friends(observedEmail, it)
+                }
+            },
+            onError = { if (userEmail == observedEmail) rawFriendLocations = emptyList() }
         )
     }
 
@@ -419,6 +432,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         if (watchers == 0) {
             stopWatching?.invoke()
             stopWatching = null
+            watchingEmail = null
             rawFriendLocations = emptyList()
         }
     }
@@ -485,8 +499,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun clearShareState() {
+        notifications.clear()
         stopWatching?.invoke()
         stopWatching = null
+        watchingEmail = null
         watchers = 0
         rawFriendLocations = emptyList()
         friends.clear()
@@ -499,11 +515,19 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         if (!favs.remove(name)) favs.add(name)
     }
 
-    fun triggerAlertToast() {
-        showAlertToast = true
+    fun notifyNearby(restaurants: List<Restaurant>, position: LatLon) {
+        if (!isLoggedIn) return
+        val app = getApplication<Application>()
+        notifications.nearby(userEmail, restaurants.map { it to com.delitracker.app.route.distanceMeters(position, it.position) }) { restaurant ->
+            val cuisineName = restaurant.cuisine ?: if (restaurant.cuisineRes != 0) app.getString(restaurant.cuisineRes) else ""
+            cuisine.any { (name, selected) -> selected && com.delitracker.app.notifications.NotificationPolicy.cuisineMatches(cuisineName, name) }
+        }
     }
 
-    fun dismissAlertToast() {
-        showAlertToast = false
+    override fun onCleared() {
+        stopWatching?.invoke()
+        stopWatching = null
+        super.onCleared()
     }
+
 }
