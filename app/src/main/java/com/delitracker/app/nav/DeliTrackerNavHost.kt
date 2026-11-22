@@ -213,7 +213,9 @@ fun DeliTrackerApp(
                 )
             }
             composable(Routes.NOTIFICACIONES) {
-                com.delitracker.app.notifications.NotificationSettingsScreen(vm.userEmail)
+                com.delitracker.app.notifications.NotificationSettingsScreen(
+                    vm.userEmail, vm.friendNotificationsError, vm::retryFriendNotifications
+                )
             }
             composable(Routes.PREMIUM) {
                 PremiumScreen(onSuscribirse = { goBack() })

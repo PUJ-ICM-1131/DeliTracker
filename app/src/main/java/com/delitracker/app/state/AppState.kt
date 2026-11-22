@@ -79,6 +79,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private var watchers = 0
     private var stopWatching: (() -> Unit)? = null
     private var watchingEmail: String? = null
+    var friendNotificationsError by mutableStateOf<Int?>(null)
+        private set
     private var lastPublishMs = 0L
     private var startingShare = false
 
@@ -408,10 +410,21 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     /** Cada pantalla que muestra amigos lo llama al entrar y [stopWatchingFriends] al salir. */
     fun startWatchingFriends() {
         watchers++
+        connectFriendNotifications()
+    }
+
+    fun retryFriendNotifications() {
+        stopWatching?.invoke()
+        stopWatching = null
+        connectFriendNotifications()
+    }
+
+    private fun connectFriendNotifications() {
         if (!isLoggedIn || !LocationShareRepository.isAvailable) return
         if (stopWatching != null && watchingEmail == userEmail) return
         stopWatching?.invoke()
         rawFriendLocations = emptyList()
+        friendNotificationsError = null
         val observedEmail = userEmail
         watchingEmail = observedEmail
         stopWatching = LocationShareRepository.observeFriends(
@@ -419,11 +432,17 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             myEmail = observedEmail,
             onChange = {
                 if (isLoggedIn && userEmail == observedEmail) {
+                    friendNotificationsError = null
                     rawFriendLocations = it; tickNow()
                     notifications.friends(observedEmail, it)
                 }
             },
-            onError = { if (userEmail == observedEmail) rawFriendLocations = emptyList() }
+            onError = {
+                if (userEmail == observedEmail) {
+                    rawFriendLocations = emptyList()
+                    friendNotificationsError = R.string.notif_social_unavailable
+                }
+            }
         )
     }
 
@@ -499,6 +518,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun clearShareState() {
+        friendNotificationsError = null
         notifications.clear()
         stopWatching?.invoke()
         stopWatching = null

@@ -1,6 +1,6 @@
 # Notificaciones — Entrega 3
 
-Implementación sobre `develop` (`32e43b3`). No requiere desplegar funciones, modificar reglas de Firestore ni incluir credenciales de servidor.
+Implementación integrada en `develop`. No requiere funciones de servidor ni credenciales privadas en la app.
 
 ## Qué se puede demostrar
 
@@ -19,6 +19,16 @@ La recepción con la app cerrada requeriría una implementación adicional de FC
 
 Los avisos sociales dependen de que Firebase Authentication, Firestore y las reglas existentes de `shares` estén operativos. El modo local de Authentication del proyecto no inicia Firestore y por eso no permite esta demo social.
 
+## Configuración de Firebase
+
+La base `(default)` del proyecto `delitracker-bd700` se creó en edición Standard, región `us-east1`, con `freeTier: true`, protección contra borrado activada y recuperación puntual desactivada. No se activó Blaze ni se añadió facturación. Las reglas existentes de `firestore.rules` se desplegaron; `firebase.json` incluye su ruta para futuros despliegues. No usar reglas públicas de prueba.
+
+```powershell
+firebase deploy --only firestore:rules --project delitracker-bd700
+```
+
+Si falla la recepción, Notificaciones muestra un aviso y permite reintentar la conexión.
+
 ## Guion para dos dispositivos
 
 1. Instalar el mismo APK en A y B. Iniciar sesión con dos cuentas diferentes del Firebase del proyecto.
@@ -31,8 +41,11 @@ Los avisos sociales dependen de que Firebase Authentication, Firestore y las reg
 
 ## Verificación automatizada
 
+El 22 de noviembre se aprobaron nueve pruebas instrumentadas: ocho casos locales y una prueba de extremo a extremo que crea dos usuarios temporales de Firebase, publica una ubicación, escucha el evento como receptor y comprueba el aviso real en `NotificationManager`. También se aprobó por separado el caso con `POST_NOTIFICATIONS` denegado y posterior concesión: diez ejecuciones aprobadas en total. La compilación de ambos APK y `lintDebug` completaron correctamente.
 
 `NotificationsTest` ejecuta casos instrumentados de distancia, preferencias, traducción de cocina, repetición, persistencia, separación de cuentas, sesiones sociales vencidas y datos de navegación. Comprueba avisos reales en `NotificationManager.activeNotifications`. La prueba de evidencia comprueba dos avisos emitidos con datos ficticios. Las capturas automáticas del emulador de 16 KB pueden quedar tapadas por el aviso de compatibilidad de las bibliotecas nativas existentes; no se consideran evidencia visual aprobada ni sustituyen una prueba entre dos cuentas reales de Firebase.
+
+`FirebaseNotificationsTest` se activa con el argumento `cloudTest=true`; elimina sus cuentas y su documento temporal al finalizar. La comprobación REST adicional confirmó compartir, actualizar y revocar acceso entre dos usuarios.
 
 Ejecutar únicamente en un emulador de pruebas: la suite limpia las preferencias locales del módulo de notificaciones y concede su permiso a la app instalada.
 

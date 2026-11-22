@@ -1,4 +1,6 @@
 <resources>
+    <string name="notif_social_unavailable">No pudimos recibir las ubicaciones compartidas. Revisa tu conexión e inténtalo de nuevo.</string>
+    <string name="notif_retry">Reintentar conexión</string>
     <string name="notif_nearby">Restaurantes cercanos</string>
     <string name="notif_social">Ubicación de amigos</string>
     <string name="notif_nearby_title">Un restaurante para ti</string>

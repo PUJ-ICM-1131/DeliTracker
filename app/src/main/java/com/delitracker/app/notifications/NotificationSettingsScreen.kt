@@ -22,7 +22,7 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import com.delitracker.app.R
 
 @Composable
-fun NotificationSettingsScreen(account: String) {
+fun NotificationSettingsScreen(account: String, socialError: Int? = null, onRetry: () -> Unit = {}) {
     val context = LocalContext.current
     val notifications = remember { DeliNotifications(context.applicationContext) }
     var nearby by remember(account) { mutableStateOf(notifications.enabled(account, DeliNotifications.NEARBY)) }
@@ -65,6 +65,10 @@ fun NotificationSettingsScreen(account: String) {
             })
         }
         Text(stringResource(if (systemEnabled) R.string.notif_allowed else R.string.notif_blocked))
+        if (social && socialError != null) {
+            Text(stringResource(socialError), color = MaterialTheme.colorScheme.error)
+            OutlinedButton(onClick = onRetry) { Text(stringResource(R.string.notif_retry)) }
+        }
         if (systemEnabled && !channelsEnabled) Text(stringResource(R.string.notif_channel_blocked))
         if (!systemEnabled && Build.VERSION.SDK_INT >= 33) {
             Button(onClick = { requestPermission() }) { Text(stringResource(R.string.notif_permission)) }
