@@ -266,7 +266,7 @@ fun FiltrosScreen(vm: AppViewModel, onAplicar: () -> Unit) {
             onToggle = { vm.toggleDiet(it) }
         )
         Spacer(Modifier.weight(1f))
-        Button(onClick = onAplicar, modifier = Modifier
+        Button(onClick = { vm.savePreferences(); onAplicar() }, modifier = Modifier
             .fillMaxWidth()
             .height(46.dp)) {
             Text(stringResource(R.string.aplicar_filtros))

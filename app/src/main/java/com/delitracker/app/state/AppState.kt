@@ -22,6 +22,9 @@ import com.delitracker.app.share.FriendLocation
 import com.delitracker.app.share.FriendStore
 import com.delitracker.app.share.LocationShareRepository
 import com.delitracker.app.share.LocationSharer
+import com.delitracker.app.userdata.SavedPreferences
+import com.delitracker.app.userdata.UserDataRepository
+import kotlinx.coroutines.withTimeoutOrNull
 import com.delitracker.app.share.PhotoThumbnail
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -108,12 +111,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     var travelMode by mutableStateOf("walk")
 
     // Favoritos
-    val favs = mutableStateListOf(
-        application.getString(R.string.trattoria_sole),
-        application.getString(R.string.verde_bowl),
-        application.getString(R.string.sushi_ten_),
-        application.getString(R.string.cafe_andino)
-    )
+    // Empiezan vacíos y se cargan de Firestore (users/{uid}.favorites) al iniciar sesión
+    val favs = mutableStateListOf<String>()
 
     // Perfil (se sobrescribe con lo guardado en el dispositivo, si existe)
     var userName by mutableStateOf("")
@@ -148,6 +147,66 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     friends.addAll(friendStore.load(profile.email))
     hasAccount = true
     isLoggedIn = true
+    loadUserData()
+    }
+
+    // ---------------- Favoritos y preferencias guardados por usuario (Firestore: users/{uid}) ----------------
+
+    private fun loadUserData() {
+        viewModelScope.launch {
+            val loaded = try { UserDataRepository.load(getApplication()) }
+            catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (e: Exception) { null }
+            val data = loaded ?: return@launch
+            data.favorites?.let { saved -> favs.clear(); favs.addAll(saved) }
+            data.preferences?.let { saved ->
+                for (key in cuisine.keys.toList()) cuisine[key] = key in saved.cuisines
+                for (key in diet.keys.toList()) diet[key] = key in saved.diet
+                saved.price?.let { price = it }
+                saved.rating?.let { rating = it }
+            }
+        }
+    }
+
+    /** Guarda cocina, dieta, precio y valoración elegidos (onboarding y filtros). */
+    fun savePreferences() {
+        val preferences = SavedPreferences(
+            cuisines = cuisine.filterValues { it }.keys.toList(),
+            diet = diet.filterValues { it }.keys.toList(),
+            price = price,
+            rating = rating
+        )
+        viewModelScope.launch {
+            try { UserDataRepository.savePreferences(getApplication(), preferences) }
+            catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (e: Exception) { /* sin red: Firestore reintenta cuando vuelva la conexión */ }
+        }
+    }
+
+    private fun saveFavorites() {
+        val snapshot = favs.toList()
+        viewModelScope.launch {
+            try { UserDataRepository.saveFavorites(getApplication(), snapshot) }
+            catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (e: Exception) { /* sin red: Firestore reintenta cuando vuelva la conexión */ }
+        }
+    }
+
+    /** Deja favoritos y preferencias como en una cuenta nueva (al cerrar sesión o eliminar la cuenta). */
+    private fun resetUserData() {
+        val app = getApplication<Application>()
+        favs.clear()
+        cuisine.clear()
+        cuisine[app.getString(R.string.italiana)] = true
+        cuisine[app.getString(R.string.mexicana)] = false
+        cuisine[app.getString(R.string.vegana)] = true
+        cuisine[app.getString(R.string.sushi)] = false
+        cuisine[app.getString(R.string.sin_gluten)] = false
+        diet.clear()
+        diet[app.getString(R.string.sin_gluten)] = true
+        diet[app.getString(R.string.vegetariana)] = false
+        price = app.getString(R.string.precio_medio)
+        rating = app.getString(R.string._4)
     }
 
     init {
@@ -225,7 +284,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     execute(onResult) {
         val email = userEmail
         stopSharingNow()
+        // Primero se borran los datos de Firestore (piden sesión iniciada) y solo después la cuenta;
+        // sin conexión se avisa y no se borra nada, para no dejar datos huérfanos
+        val ids = (seenRestaurants.values.map { it.id } + RestaurantCatalog.all.map { it.id }).distinct()
+        val deleted = withTimeoutOrNull(15_000L) { UserDataRepository.deleteAll(getApplication(), ids); true }
+        if (deleted != true) throw AuthFailure(503, "network_error")
         clearShareState()
+        resetUserData()
         profileRepository.deleteAccount()
         deletePhotoFile(photoStore.get(email))
         photoStore.remove(email)
@@ -251,6 +316,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             stopSharingNow()
             clearShareState()
+            resetUserData()
             try { profileRepository.logout() }
             catch (e: java.io.IOException) { authMessage = R.string.auth_logout_offline }
             catch (e: AuthFailure) { authMessage = R.string.auth_logout_offline }
@@ -563,6 +629,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun toggleFavorite(name: String) {
         if (!favs.remove(name)) favs.add(name)
+        saveFavorites()
     }
 
     fun notifyNearby(restaurants: List<Restaurant>, position: LatLon) {
