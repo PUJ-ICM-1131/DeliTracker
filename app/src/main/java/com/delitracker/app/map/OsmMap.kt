@@ -25,10 +25,14 @@ import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Polyline
 import java.io.File
 
 private const val DEFAULT_ZOOM = 16.0
 private const val FOCUS_ZOOM = 17.5
+private const val MY_COLOR = 0xFFE8590C.toInt()
+private const val FRIEND_COLOR = 0xFF1C7ED6.toInt()
+private const val TRACK_WIDTH = 8f
 
 /** osmdroid necesita un User-Agent propio (política de uso de OpenStreetMap) y una caché. */
 private fun configureOsmdroid(context: Context) {
@@ -55,7 +59,11 @@ fun OsmMap(
     recenterTick: Int,
     onRestaurantClick: (Restaurant) -> Unit,
     modifier: Modifier = Modifier,
-    friends: List<FriendLocation> = emptyList()
+    friends: List<FriendLocation> = emptyList(),
+    friendTracks: Map<String, List<LatLon>> = emptyMap(),
+    myTrack: List<LatLon> = emptyList(),
+    myPhotoPath: String? = null,
+    myName: String = ""
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -131,13 +139,49 @@ fun OsmMap(
                 position = GeoPoint(friend.position.lat, friend.position.lon)
                 title = friend.name
                 snippet = context.getString(R.string.share_marker_snippet)
-                icon = ContextCompat.getDrawable(context, android.R.drawable.ic_menu_myplaces)
+                icon = MarkerIcons.circular(context, MarkerIcons.decodeBase64(friend.photo), friend.name, FRIEND_COLOR)
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
             }
         }
         mapView.overlays.addAll(markers)
         mapView.invalidate()
         onDispose { mapView.overlays.removeAll(markers) }
+    }
+
+    // Recorrido de cada amigo (línea azul): desaparece cuando deja de compartir
+    DisposableEffect(mapView, friends, friendTracks) {
+        val sharing = friends.mapTo(HashSet()) { it.uid }
+        val lines = friendTracks.filter { (uid, points) -> uid in sharing && points.size >= 2 }.map { (_, points) ->
+            Polyline(mapView).apply {
+                setPoints(points.map { GeoPoint(it.lat, it.lon) })
+                outlinePaint.color = FRIEND_COLOR
+                outlinePaint.strokeWidth = TRACK_WIDTH
+            }
+        }
+        mapView.overlays.addAll(0, lines)
+        mapView.invalidate()
+        onDispose { mapView.overlays.removeAll(lines) }
+    }
+
+    // Mi recorrido (línea naranja): se borra cuando la lista queda vacía
+    DisposableEffect(mapView, myTrack) {
+        val line = Polyline(mapView).apply {
+            setPoints(myTrack.map { GeoPoint(it.lat, it.lon) })
+            outlinePaint.color = MY_COLOR
+            outlinePaint.strokeWidth = TRACK_WIDTH
+        }
+        if (myTrack.size >= 2) mapView.overlays.add(0, line)
+        mapView.invalidate()
+        onDispose { mapView.overlays.remove(line) }
+    }
+
+    // Mi marcador: mi foto de perfil dentro de un círculo (o mi inicial si no tengo foto)
+    LaunchedEffect(myPhotoPath, myName) {
+        if (myPhotoPath != null || myName.isNotBlank()) {
+            userMarker.icon = MarkerIcons.circular(context, MarkerIcons.decodeFile(myPhotoPath), myName, MY_COLOR)
+            userMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+            mapView.invalidate()
+        }
     }
 
     // Mover el marcador del usuario cuando llega una ubicación nueva

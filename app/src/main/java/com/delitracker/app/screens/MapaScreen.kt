@@ -239,7 +239,11 @@ fun MapaScreen(vm: AppViewModel, onBuscar: () -> Unit, onFiltros: () -> Unit, on
                 recenterTick = recenterTick,
                 onRestaurantClick = { targetId = it.id },
                 modifier = Modifier.fillMaxSize(),
-                friends = vm.friendLocations
+                friends = vm.friendLocations,
+                friendTracks = vm.friendTracks,
+                myTrack = vm.myTrack,
+                myPhotoPath = vm.userPhotoPath,
+                myName = vm.userName
             )
 
             FilledTonalIconButton(

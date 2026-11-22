@@ -12,7 +12,9 @@ data class FriendLocation(
     val email: String,
     val position: LatLon,
     val updatedAtMs: Long,
-    val expiresAtMs: Long
+    val expiresAtMs: Long,
+    /** Foto de perfil reducida (JPEG en Base64) para el marcador del mapa; null si no tiene. */
+    val photo: String? = null
 )
 
 /** Una ubicación sin actualizar durante este tiempo se considera vieja y se oculta. */
