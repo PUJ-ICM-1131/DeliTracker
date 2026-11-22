@@ -62,7 +62,7 @@ class DeliNotifications(private val context: Context) {
         ))
     }
 
-    @android.annotation.SuppressLint("MissingPermission") 
+    @android.annotation.SuppressLint("MissingPermission")
     private fun post(account: String, channel: String, id: String, title: String, body: String,
                      restaurant: Restaurant? = null): Boolean {
         if (!enabled(account, channel) || !systemEnabled(channel)) return false
