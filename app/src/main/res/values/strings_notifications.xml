@@ -1,0 +1,20 @@
+<resources>
+    <string name="notif_nearby">Restaurantes cercanos</string>
+    <string name="notif_social">Ubicación de amigos</string>
+    <string name="notif_nearby_title">Un restaurante para ti</string>
+    <string name="notif_nearby_body">%1$s está a %2$d m y coincide con tus preferencias de cocina. Toca para ver el detalle.</string>
+    <string name="notif_social_title">Un amigo comparte contigo</string>
+    <string name="notif_social_body">%1$s está compartiendo su ubicación. Toca para ver el mapa.</string>
+    <string name="notif_test_title">Notificación de prueba</string>
+    <string name="notif_test_body">Los avisos de DeliTracker están funcionando. Toca para abrir el mapa.</string>
+    <string name="notif_explanation">Recibe avisos al estar a 200 m de un restaurante de tus cocinas seleccionadas y cuando un amigo comparta contigo. Las preferencias se guardan por cuenta en este dispositivo.</string>
+    <string name="notif_scope">Los avisos cercanos se detectan con el mapa abierto y permiso de ubicación. Los de amigos se reciben mientras la sesión de la app permanece activa. No se reciben eventos nuevos con la app cerrada.</string>
+    <string name="notif_permission">Permitir notificaciones</string>
+    <string name="notif_system_settings">Abrir ajustes de Android</string>
+    <string name="notif_allowed">Android permite las notificaciones.</string>
+    <string name="notif_blocked">Android tiene las notificaciones bloqueadas. Puedes habilitarlas en sus ajustes.</string>
+    <string name="notif_channel_blocked">Uno o más canales están bloqueados en Android.</string>
+    <string name="notif_test">Enviar notificación de prueba</string>
+    <string name="notif_sent">Notificación enviada. Abre la bandeja de Android para verla.</string>
+    <string name="notif_not_sent">No se pudo enviar. Activa Restaurantes cercanos y revisa los permisos y el canal en Android.</string>
+</resources>
